@@ -1,9 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { createCalendarEvent } from "@/lib/google-calendar";
+import {
+  checkBookingRateLimit,
+  getClientIP,
+  sanitizeInput,
+  isValidEmail,
+  isValidItalianPhone,
+  logSuspiciousActivity,
+} from "@/lib/security";
 
 export async function POST(request: NextRequest) {
   try {
+    // 🔒 Rate Limiting (Anti-Spam)
+    const clientIP = getClientIP(request.headers);
+    if (!checkBookingRateLimit(clientIP)) {
+      logSuspiciousActivity({
+        ip: clientIP,
+        endpoint: '/api/bookings',
+        reason: 'Rate limit exceeded - possibile spam',
+        timestamp: new Date(),
+      });
+      return NextResponse.json(
+        { error: "Troppe richieste. Riprova tra un'ora." },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const {
       serviceId,
@@ -20,12 +43,41 @@ export async function POST(request: NextRequest) {
       termsAccepted,
     } = body;
 
+    // 🔒 Validazione input
     if (!serviceId || !staffId || !patientEmail || !patientName || !startTime) {
       return NextResponse.json(
         { error: "Dati mancanti" },
         { status: 400 }
       );
     }
+
+    // Validazione email
+    if (!isValidEmail(patientEmail)) {
+      logSuspiciousActivity({
+        ip: clientIP,
+        endpoint: '/api/bookings',
+        reason: 'Invalid email format',
+        timestamp: new Date(),
+      });
+      return NextResponse.json(
+        { error: "Email non valida" },
+        { status: 400 }
+      );
+    }
+
+    // Validazione telefono (se fornito)
+    if (patientPhone && !isValidItalianPhone(patientPhone)) {
+      return NextResponse.json(
+        { error: "Numero di telefono non valido" },
+        { status: 400 }
+      );
+    }
+
+    // Sanitizzazione input
+    const sanitizedName = sanitizeInput(patientName);
+    const sanitizedEmail = sanitizeInput(patientEmail);
+    const sanitizedPhone = patientPhone ? sanitizeInput(patientPhone) : null;
+    const sanitizedNotes = notes ? sanitizeInput(notes) : null;
 
     // Recupera informazioni sul servizio
     const service = await db.service.findUnique({
@@ -53,7 +105,7 @@ export async function POST(request: NextRequest) {
     const crypto = require("crypto");
     const consentSignature = crypto
       .createHash("sha256")
-      .update(`${patientEmail}${consentTimestamp}${privacyAccepted}${medicalConsentAccepted}${informedConsentAccepted}${termsAccepted}`)
+      .update(`${sanitizedEmail}${consentTimestamp}${privacyAccepted}${medicalConsentAccepted}${informedConsentAccepted}${termsAccepted}`)
       .digest("hex");
 
     if (!patient) {
@@ -62,9 +114,9 @@ export async function POST(request: NextRequest) {
 
       patient = await db.user.create({
         data: {
-          email: patientEmail,
-          name: patientName,
-          phone: patientPhone,
+          email: sanitizedEmail,
+          name: sanitizedName,
+          phone: sanitizedPhone,
           password: tempPassword,
           role: "PATIENT",
           // Consensi GDPR
@@ -101,19 +153,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Crea evento su Google Calendar con tutti i dettagli nel titolo
-    const eventTitle = `${patientName} - ${service.name} - €${service.price} - ${patientEmail} - ${patientPhone || "N/D"}`;
+    const eventTitle = `${sanitizedName} - ${service.name} - €${service.price} - ${sanitizedEmail} - ${sanitizedPhone || "N/D"}`;
     const eventDescription = `
 📋 DETTAGLI PRENOTAZIONE
 
-👤 Paziente: ${patientName}
-📧 Email: ${patientEmail}
-📱 Telefono: ${patientPhone || "N/D"}
+👤 Paziente: ${sanitizedName}
+📧 Email: ${sanitizedEmail}
+📱 Telefono: ${sanitizedPhone || "N/D"}
 
 🏥 Servizio: ${service.name}
 💶 Prezzo: €${service.price}
 ⏱️ Durata: ${service.durationMinutes} minuti
 
-📝 Note: ${notes || "Nessuna nota"}
+📝 Note: ${sanitizedNotes || "Nessuna nota"}
 
 ---
 Sistema Prenotazioni Centro Biofertility
@@ -124,7 +176,7 @@ Sistema Prenotazioni Centro Biofertility
       eventDescription,
       start,
       end,
-      patientEmail
+      sanitizedEmail
     );
 
     // Ottieni link di pagamento dalle impostazioni
@@ -140,7 +192,7 @@ Sistema Prenotazioni Centro Biofertility
         patientId: patient.id,
         startTime: start,
         endTime: end,
-        notes,
+        notes: sanitizedNotes,
         googleEventId: calendarEvent.id || undefined,
         paymentLink: paymentSetting?.value || process.env.PAYMENT_LINK_URL,
         status: "PENDING",

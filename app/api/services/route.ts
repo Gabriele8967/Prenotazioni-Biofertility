@@ -1,7 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { checkAPIRateLimit, getClientIP } from "@/lib/security";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // 🔒 Rate Limiting
+  const clientIP = getClientIP(request.headers);
+  if (!checkAPIRateLimit(clientIP, '/api/services')) {
+    return NextResponse.json(
+      { error: "Troppe richieste" },
+      { status: 429 }
+    );
+  }
   try {
     const services = await db.service.findMany({
       where: {
