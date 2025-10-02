@@ -45,6 +45,23 @@ export default function AdminStaffPage() {
     }
   };
 
+  const handleDelete = async (staffId: string, staffName: string) => {
+    if (!confirm(`Sei sicuro di voler eliminare ${staffName}? Questa azione non può essere annullata.`)) {
+      return;
+    }
+
+    const res = await fetch(`/api/admin/staff?id=${staffId}`, {
+      method: "DELETE",
+    });
+
+    if (res.ok) {
+      fetchStaff();
+    } else {
+      const data = await res.json();
+      alert(data.error || "Errore nell'eliminazione");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white shadow">
@@ -121,11 +138,21 @@ export default function AdminStaffPage() {
                 <CardTitle>{member.name}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-1 text-sm">
-                  <p><strong>Email:</strong> {member.email}</p>
-                  {member.phone && <p><strong>Tel:</strong> {member.phone}</p>}
-                  <p><strong>Servizi:</strong> {member.services?.length || 0}</p>
-                  <p><strong>Prenotazioni:</strong> {member._count.bookingsAsStaff}</p>
+                <div className="space-y-3">
+                  <div className="space-y-1 text-sm">
+                    <p><strong>Email:</strong> {member.email}</p>
+                    {member.phone && <p><strong>Tel:</strong> {member.phone}</p>}
+                    <p><strong>Servizi:</strong> {member.services?.length || 0}</p>
+                    <p><strong>Prenotazioni:</strong> {member._count.bookingsAsStaff}</p>
+                  </div>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => handleDelete(member.id, member.name)}
+                  >
+                    Elimina
+                  </Button>
                 </div>
               </CardContent>
             </Card>

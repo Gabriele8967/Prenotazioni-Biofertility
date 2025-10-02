@@ -102,3 +102,46 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await getServerSession();
+
+    if (!session || session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Non autorizzato" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const staffId = searchParams.get("id");
+
+    if (!staffId) {
+      return NextResponse.json({ error: "ID mancante" }, { status: 400 });
+    }
+
+    // Verifica che l'utente sia effettivamente STAFF
+    const staffMember = await db.user.findUnique({
+      where: { id: staffId },
+      select: { role: true },
+    });
+
+    if (!staffMember || staffMember.role !== "STAFF") {
+      return NextResponse.json(
+        { error: "Membro staff non trovato" },
+        { status: 404 }
+      );
+    }
+
+    // Elimina il membro dello staff
+    await db.user.delete({
+      where: { id: staffId },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting staff:", error);
+    return NextResponse.json(
+      { error: "Errore nell'eliminazione dello staff" },
+      { status: 500 }
+    );
+  }
+}
