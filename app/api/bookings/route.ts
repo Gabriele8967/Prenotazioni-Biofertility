@@ -5,7 +5,20 @@ import { createCalendarEvent } from "@/lib/google-calendar";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { serviceId, staffId, patientEmail, patientName, patientPhone, startTime, notes } = body;
+    const {
+      serviceId,
+      staffId,
+      patientEmail,
+      patientName,
+      patientPhone,
+      startTime,
+      notes,
+      // Consensi legali
+      privacyAccepted,
+      medicalConsentAccepted,
+      informedConsentAccepted,
+      termsAccepted,
+    } = body;
 
     if (!serviceId || !staffId || !patientEmail || !patientName || !startTime) {
       return NextResponse.json(
@@ -35,6 +48,14 @@ export async function POST(request: NextRequest) {
       where: { email: patientEmail },
     });
 
+    // Genera firma digitale (hash dei consensi + timestamp)
+    const consentTimestamp = new Date().toISOString();
+    const crypto = require("crypto");
+    const consentSignature = crypto
+      .createHash("sha256")
+      .update(`${patientEmail}${consentTimestamp}${privacyAccepted}${medicalConsentAccepted}${informedConsentAccepted}${termsAccepted}`)
+      .digest("hex");
+
     if (!patient) {
       const bcrypt = require("bcryptjs");
       const tempPassword = await bcrypt.hash(Math.random().toString(36), 10);
@@ -46,6 +67,35 @@ export async function POST(request: NextRequest) {
           phone: patientPhone,
           password: tempPassword,
           role: "PATIENT",
+          // Consensi GDPR
+          privacyAccepted: privacyAccepted || false,
+          privacyAcceptedAt: privacyAccepted ? new Date() : null,
+          // Consensi sanitari
+          medicalConsentAccepted: medicalConsentAccepted || false,
+          medicalConsentAt: medicalConsentAccepted ? new Date() : null,
+          informedConsentAccepted: informedConsentAccepted || false,
+          informedConsentAt: informedConsentAccepted ? new Date() : null,
+          termsAccepted: termsAccepted || false,
+          termsAcceptedAt: termsAccepted ? new Date() : null,
+          consentSignature,
+          ipAddress: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown",
+        },
+      });
+    } else {
+      // Aggiorna consensi se paziente già esistente
+      patient = await db.user.update({
+        where: { id: patient.id },
+        data: {
+          privacyAccepted: privacyAccepted || patient.privacyAccepted,
+          privacyAcceptedAt: privacyAccepted ? new Date() : patient.privacyAcceptedAt,
+          medicalConsentAccepted: medicalConsentAccepted || patient.medicalConsentAccepted,
+          medicalConsentAt: medicalConsentAccepted ? new Date() : patient.medicalConsentAt,
+          informedConsentAccepted: informedConsentAccepted || patient.informedConsentAccepted,
+          informedConsentAt: informedConsentAccepted ? new Date() : patient.informedConsentAt,
+          termsAccepted: termsAccepted || patient.termsAccepted,
+          termsAcceptedAt: termsAccepted ? new Date() : patient.termsAcceptedAt,
+          consentSignature,
+          ipAddress: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown",
         },
       });
     }

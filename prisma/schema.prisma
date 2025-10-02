@@ -28,6 +28,19 @@ model User {
   lastLogin           DateTime?
   ipAddress           String?   // Per audit log
 
+  // Consensi Sanitari (obbligatori per centri medici)
+  medicalConsentAccepted Boolean @default(false)  // Consenso al trattamento dati sanitari (Art. 9 GDPR)
+  medicalConsentAt       DateTime?                 // Data consenso sanitario
+  informedConsentAccepted Boolean @default(false)  // Consenso informato alla prestazione
+  informedConsentAt      DateTime?                 // Data consenso informato
+  termsAccepted          Boolean @default(false)   // Termini e condizioni
+  termsAcceptedAt        DateTime?                 // Data accettazione T&C
+
+  // Dati aggiuntivi per audit medico-legale
+  fiscalCode             String?                   // Codice fiscale (opzionale)
+  birthDate              DateTime?                 // Data di nascita
+  consentSignature       String?                   // Firma digitale consenso (timestamp hash)
+
   // Relations
   bookingsAsPatient   Booking[]  @relation("PatientBookings")
   bookingsAsStaff     Booking[]  @relation("StaffBookings")

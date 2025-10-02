@@ -46,6 +46,12 @@ export default function BookingPage() {
   const [bookingComplete, setBookingComplete] = useState(false);
   const [paymentLink, setPaymentLink] = useState("");
 
+  // Consensi legali obbligatori
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const [medicalConsentAccepted, setMedicalConsentAccepted] = useState(false);
+  const [informedConsentAccepted, setInformedConsentAccepted] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+
   useEffect(() => {
     fetchServices();
   }, []);
@@ -121,6 +127,11 @@ export default function BookingPage() {
           patientPhone,
           startTime: selectedSlot.start.toISOString(),
           notes,
+          // Consensi legali con firma digitale
+          privacyAccepted,
+          medicalConsentAccepted,
+          informedConsentAccepted,
+          termsAccepted,
         }),
       });
 
@@ -401,12 +412,126 @@ export default function BookingPage() {
                     <p className="text-sm font-semibold">€{selectedService?.price}</p>
                   </div>
 
+                  {/* CONSENSI OBBLIGATORI PER CENTRI MEDICI */}
+                  <div className="border-t-2 border-gray-200 pt-6 mt-6 space-y-4">
+                    <h3 className="font-semibold text-lg mb-4">
+                      ⚖️ Consensi Obbligatori (richiesti per legge)
+                    </h3>
+
+                    {/* Privacy Policy GDPR */}
+                    <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg">
+                      <input
+                        type="checkbox"
+                        id="privacy"
+                        checked={privacyAccepted}
+                        onChange={(e) => setPrivacyAccepted(e.target.checked)}
+                        required
+                        className="mt-1"
+                      />
+                      <label htmlFor="privacy" className="text-sm">
+                        <span className="font-semibold">Privacy Policy (GDPR)</span>
+                        <p className="text-gray-600 mt-1">
+                          Dichiaro di aver letto e accettato l'
+                          <a href="/privacy" target="_blank" className="text-blue-600 hover:underline mx-1">
+                            Informativa Privacy
+                          </a>
+                          e autorizzo il trattamento dei miei dati personali ai sensi del Regolamento UE 2016/679.
+                        </p>
+                      </label>
+                    </div>
+
+                    {/* Consenso Dati Sanitari (Art. 9 GDPR) */}
+                    <div className="flex items-start gap-3 p-4 bg-red-50 border-2 border-red-200 rounded-lg">
+                      <input
+                        type="checkbox"
+                        id="medical"
+                        checked={medicalConsentAccepted}
+                        onChange={(e) => setMedicalConsentAccepted(e.target.checked)}
+                        required
+                        className="mt-1"
+                      />
+                      <label htmlFor="medical" className="text-sm">
+                        <span className="font-semibold text-red-800">
+                          ⚕️ Consenso al Trattamento Dati Sanitari (Art. 9 GDPR) *OBBLIGATORIO*
+                        </span>
+                        <p className="text-gray-700 mt-1">
+                          Autorizzo espressamente il Centro Medico Biofertility al trattamento dei miei dati relativi alla salute
+                          (categorie particolari di dati personali ex art. 9 GDPR), necessario per l'erogazione delle prestazioni
+                          sanitarie richieste. Tali dati saranno conservati per 10 anni come previsto dalla normativa sanitaria.
+                        </p>
+                      </label>
+                    </div>
+
+                    {/* Consenso Informato alla Prestazione */}
+                    <div className="flex items-start gap-3 p-4 bg-yellow-50 border-2 border-yellow-200 rounded-lg">
+                      <input
+                        type="checkbox"
+                        id="informed"
+                        checked={informedConsentAccepted}
+                        onChange={(e) => setInformedConsentAccepted(e.target.checked)}
+                        required
+                        className="mt-1"
+                      />
+                      <label htmlFor="informed" className="text-sm">
+                        <span className="font-semibold text-yellow-800">
+                          📋 Consenso Informato alla Prestazione Sanitaria (L. 219/2017)
+                        </span>
+                        <p className="text-gray-700 mt-1">
+                          Dichiaro di aver letto e compreso il
+                          <a href="/consenso-informato" target="_blank" className="text-blue-600 hover:underline mx-1">
+                            Consenso Informato
+                          </a>
+                          relativo alla prestazione sanitaria che mi verrà erogata. Sono stato informato/a dei rischi, benefici
+                          e alternative terapeutiche e acconsento liberamente alla prestazione.
+                        </p>
+                      </label>
+                    </div>
+
+                    {/* Termini e Condizioni */}
+                    <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg">
+                      <input
+                        type="checkbox"
+                        id="terms"
+                        checked={termsAccepted}
+                        onChange={(e) => setTermsAccepted(e.target.checked)}
+                        required
+                        className="mt-1"
+                      />
+                      <label htmlFor="terms" className="text-sm">
+                        <span className="font-semibold">Termini e Condizioni del Servizio</span>
+                        <p className="text-gray-600 mt-1">
+                          Dichiaro di aver letto e accettato i
+                          <a href="/termini-condizioni" target="_blank" className="text-blue-600 hover:underline mx-1">
+                            Termini e Condizioni
+                          </a>
+                          del servizio di prenotazione online, incluse le politiche di cancellazione e rimborso.
+                        </p>
+                      </label>
+                    </div>
+
+                    {/* Firma Digitale */}
+                    <div className="bg-blue-100 border-2 border-blue-300 rounded-lg p-4 mt-4">
+                      <p className="text-sm font-semibold text-blue-900 mb-2">
+                        🔏 Firma Digitale dei Consensi
+                      </p>
+                      <p className="text-xs text-blue-800">
+                        Cliccando su "Conferma Prenotazione", apponi la tua firma digitale ai consensi sopra indicati.
+                        La firma avrà validità legale ai sensi del D.Lgs. 82/2005 (CAD - Codice dell'Amministrazione Digitale).
+                        Timestamp: {new Date().toISOString()}
+                      </p>
+                    </div>
+                  </div>
+
                   <div className="flex gap-2">
                     <Button variant="outline" type="button" onClick={() => setStep(3)}>
                       Indietro
                     </Button>
-                    <Button type="submit" disabled={loading} className="flex-1">
-                      {loading ? "Prenotazione in corso..." : "Conferma Prenotazione"}
+                    <Button
+                      type="submit"
+                      disabled={loading || !privacyAccepted || !medicalConsentAccepted || !informedConsentAccepted || !termsAccepted}
+                      className="flex-1"
+                    >
+                      {loading ? "Prenotazione in corso..." : "Conferma Prenotazione e Firma Digitale"}
                     </Button>
                   </div>
                 </form>
