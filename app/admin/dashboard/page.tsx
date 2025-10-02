@@ -1,5 +1,4 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getServerSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -7,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Calendar, Users, ClipboardList, Settings } from "lucide-react";
 
 export default async function AdminDashboard() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
 
   if (!session || session.user.role !== "ADMIN") {
     redirect("/admin/login");

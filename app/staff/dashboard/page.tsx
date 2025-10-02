@@ -1,5 +1,4 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getServerSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -7,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/lib/db";
 
 export default async function StaffDashboard() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
 
   if (!session || session.user.role !== "STAFF") {
     redirect("/staff/login");

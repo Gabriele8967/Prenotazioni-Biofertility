@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getServerSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
 
     if (!session || session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Non autorizzato" }, { status: 401 });
@@ -18,7 +18,7 @@ export async function PUT(
     const { name, description, durationMinutes, price, notes, color, staffIds, active } = body;
 
     const service = await db.service.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         name,
         description,
@@ -50,17 +50,18 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
 
     if (!session || session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Non autorizzato" }, { status: 401 });
     }
 
     await db.service.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ success: true });
