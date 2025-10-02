@@ -21,7 +21,11 @@
       "Bash(npx vercel:*)",
       "WebSearch",
       "WebFetch(domain:medium.com)",
-      "WebFetch(domain:codevoweb.com)"
+      "WebFetch(domain:codevoweb.com)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_i5PqfmEBnR2d@ep-polished-hill-agxsfgwn-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require\" npx tsx scripts/create-admin.ts)",
+      "Bash(npx prisma generate:*)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_i5PqfmEBnR2d@ep-polished-hill-agxsfgwn-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require\" npx prisma migrate deploy)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_i5PqfmEBnR2d@ep-polished-hill-agxsfgwn-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require\" npx prisma migrate dev --name add_gdpr_fields)"
     ],
     "deny": [],
     "ask": []
