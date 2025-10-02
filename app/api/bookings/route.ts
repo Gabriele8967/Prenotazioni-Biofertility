@@ -50,10 +50,28 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Crea evento su Google Calendar
+    // Crea evento su Google Calendar con tutti i dettagli nel titolo
+    const eventTitle = `${patientName} - ${service.name} - €${service.price} - ${patientEmail} - ${patientPhone || "N/D"}`;
+    const eventDescription = `
+📋 DETTAGLI PRENOTAZIONE
+
+👤 Paziente: ${patientName}
+📧 Email: ${patientEmail}
+📱 Telefono: ${patientPhone || "N/D"}
+
+🏥 Servizio: ${service.name}
+💶 Prezzo: €${service.price}
+⏱️ Durata: ${service.durationMinutes} minuti
+
+📝 Note: ${notes || "Nessuna nota"}
+
+---
+Sistema Prenotazioni Centro Biofertility
+    `.trim();
+
     const calendarEvent = await createCalendarEvent(
-      `${service.name} - ${patientName}`,
-      `Paziente: ${patientName}\nEmail: ${patientEmail}\nTelefono: ${patientPhone || "N/D"}\nNote: ${notes || "N/D"}`,
+      eventTitle,
+      eventDescription,
       start,
       end,
       patientEmail
