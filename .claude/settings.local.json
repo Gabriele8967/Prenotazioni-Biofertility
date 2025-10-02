@@ -18,7 +18,10 @@
       "Bash(git push:*)",
       "Bash(git remote set-url:*)",
       "Bash(openssl rand:*)",
-      "Bash(npx vercel:*)"
+      "Bash(npx vercel:*)",
+      "WebSearch",
+      "WebFetch(domain:medium.com)",
+      "WebFetch(domain:codevoweb.com)"
     ],
     "deny": [],
     "ask": []

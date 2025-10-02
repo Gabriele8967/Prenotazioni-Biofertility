@@ -1,11 +1,11 @@
-import { NextAuthOptions } from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
+import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
+import CredentialsProvider from "next-auth/providers/credentials";
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 
-export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(db) as any,
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  adapter: PrismaAdapter(db),
   session: {
     strategy: "jwt",
   },
@@ -26,7 +26,7 @@ export const authOptions: NextAuthOptions = {
 
         const user = await db.user.findUnique({
           where: {
-            email: credentials.email,
+            email: credentials.email as string,
           },
         });
 
@@ -35,7 +35,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         const isPasswordValid = await bcrypt.compare(
-          credentials.password,
+          credentials.password as string,
           user.password
         );
 
@@ -58,7 +58,7 @@ export const authOptions: NextAuthOptions = {
         return {
           ...token,
           id: user.id,
-          role: user.role,
+          role: (user as any).role,
         };
       }
       return token;
@@ -68,16 +68,13 @@ export const authOptions: NextAuthOptions = {
         ...session,
         user: {
           ...session.user,
-          id: token.id,
-          role: token.role,
+          id: token.id as string,
+          role: token.role as string,
         },
       };
     },
   },
-};
+});
 
-// Dinamically import getServerSession to avoid build errors
-export async function getServerSession() {
-  const { getServerSession: gss } = await import("next-auth");
-  return gss(authOptions);
-}
+// Helper for server components
+export const getServerSession = auth;
