@@ -3,7 +3,6 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
-import { getServerSession as getServerSessionNext } from "next-auth/next";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db) as any,
@@ -77,4 +76,8 @@ export const authOptions: NextAuthOptions = {
   },
 };
 
-export const getServerSession = () => getServerSessionNext(authOptions);
+// Dinamically import getServerSession to avoid build errors
+export async function getServerSession() {
+  const { getServerSession: gss } = await import("next-auth");
+  return gss(authOptions);
+}
