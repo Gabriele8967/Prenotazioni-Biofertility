@@ -91,6 +91,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Recupera informazioni sullo staff
+    const staff = await db.user.findUnique({
+      where: { id: staffId },
+      select: { email: true },
+    });
+
+    if (!staff) {
+      return NextResponse.json(
+        { error: "Staff non trovato" },
+        { status: 404 }
+      );
+    }
+
     // Calcola endTime
     const start = new Date(startTime);
     const end = new Date(start.getTime() + service.durationMinutes * 60000);
@@ -176,7 +189,8 @@ Sistema Prenotazioni Centro Biofertility
       eventDescription,
       start,
       end,
-      sanitizedEmail
+      staff.email, // Staff email for OAuth2 authentication
+      sanitizedEmail // Patient email as attendee
     );
 
     // Ottieni link di pagamento dalle impostazioni

@@ -41,6 +41,11 @@ model User {
   birthDate              DateTime?                 // Data di nascita
   consentSignature       String?                   // Firma digitale consenso (timestamp hash)
 
+  // Google OAuth2 tokens (per staff members)
+  googleAccessToken      String?                   // Token di accesso Google
+  googleRefreshToken     String?                   // Token di refresh Google
+  googleTokenExpiry      DateTime?                 // Scadenza del token di accesso
+
   // Relations
   bookingsAsPatient   Booking[]  @relation("PatientBookings")
   bookingsAsStaff     Booking[]  @relation("StaffBookings")
