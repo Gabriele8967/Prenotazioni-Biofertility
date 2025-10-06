@@ -35,9 +35,11 @@ export async function GET(request: NextRequest) {
         'https://www.googleapis.com/auth/calendar',
         'https://www.googleapis.com/auth/calendar.events',
       ],
-      // Forza il prompt per ottenere sempre il refresh token
-      prompt: 'consent',
+      // Forza selezione account e consenso ogni volta
+      prompt: 'consent select_account',
       state: session.user.id, // Passa l'ID utente nello state
+      // Forza approvazione anche se già autorizzato
+      include_granted_scopes: true,
     });
 
     return NextResponse.json({ authUrl });
