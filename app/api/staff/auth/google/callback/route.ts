@@ -49,9 +49,19 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    // Verifica ruolo utente per redirect corretto
+    const user = await db.user.findUnique({
+      where: { id: state },
+      select: { role: true },
+    });
+
+    const dashboardUrl = user?.role === 'ADMIN'
+      ? '/admin/dashboard?google_auth=success'
+      : '/staff/dashboard?google_auth=success';
+
     // Redirect alla dashboard con successo
     return NextResponse.redirect(
-      new URL('/staff/dashboard?google_auth=success', request.url)
+      new URL(dashboardUrl, request.url)
     );
   } catch (error) {
     console.error('Error in Google OAuth callback:', error);

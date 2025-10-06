@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/lib/db";
+import { GoogleCalendarConnect } from "@/components/GoogleCalendarConnect";
 
 export default async function StaffDashboard() {
   const session = await getServerSession();
@@ -11,6 +12,17 @@ export default async function StaffDashboard() {
   if (!session || session.user.role !== "STAFF") {
     redirect("/staff/login");
   }
+
+  // Recupera info utente con stato Google Calendar
+  const user = await db.user.findUnique({
+    where: { id: session.user.id },
+    select: {
+      googleRefreshToken: true,
+      googleTokenExpiry: true,
+    },
+  });
+
+  const isGoogleConnected = !!user?.googleRefreshToken;
 
   const bookings = await db.booking.findMany({
     where: {
@@ -49,6 +61,8 @@ export default async function StaffDashboard() {
       </div>
 
       <div className="container mx-auto px-4 py-8">
+        <GoogleCalendarConnect isConnected={isGoogleConnected} />
+
         <h2 className="text-xl font-semibold mb-4">Prossimi Appuntamenti</h2>
 
         {bookings.length === 0 ? (
