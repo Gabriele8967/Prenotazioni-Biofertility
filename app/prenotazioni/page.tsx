@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Clock, User, Mail, Phone, MessageSquare } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, User, Mail, Phone, MessageSquare, CheckCircle2 } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
 
 type Service = {
   id: string;
@@ -31,7 +32,7 @@ export default function BookingPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedStaff, setSelectedStaff] = useState<string>("");
-  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [loading, setLoading] = useState(false);
@@ -60,20 +61,30 @@ export default function BookingPage() {
     try {
       const res = await fetch("/api/services");
       const data = await res.json();
-      setServices(data);
+
+      // Verifica che data sia un array
+      if (Array.isArray(data)) {
+        setServices(data);
+      } else {
+        console.error("API error:", data);
+        setServices([]);
+      }
     } catch (error) {
       console.error("Error fetching services:", error);
+      setServices([]);
     }
   };
 
-  const fetchAvailableSlots = async () => {
+  const fetchAvailableSlots = useCallback(async () => {
     if (!selectedService || !selectedDate || !selectedStaff) return;
 
     setLoading(true);
     try {
       const staffMember = selectedService.staffMembers.find(s => s.id === selectedStaff);
+      // Convert Date to YYYY-MM-DD format
+      const dateStr = selectedDate.toISOString().split("T")[0];
       const res = await fetch(
-        `/api/available-slots?date=${selectedDate}&duration=${selectedService.durationMinutes}&staffEmail=${staffMember?.email}`
+        `/api/available-slots?date=${dateStr}&duration=${selectedService.durationMinutes}&staffEmail=${staffMember?.email}`
       );
       const data = await res.json();
       setAvailableSlots(data.map((slot: any) => ({
@@ -85,18 +96,18 @@ export default function BookingPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedService, selectedDate, selectedStaff]);
 
   useEffect(() => {
     if (selectedDate && selectedService && selectedStaff) {
       fetchAvailableSlots();
     }
-  }, [selectedDate, selectedService, selectedStaff]);
+  }, [selectedDate, selectedService, selectedStaff, fetchAvailableSlots]);
 
   const handleServiceSelect = (service: Service) => {
     setSelectedService(service);
     setSelectedStaff("");
-    setSelectedDate("");
+    setSelectedDate(undefined);
     setStep(2);
   };
 
@@ -299,52 +310,104 @@ export default function BookingPage() {
         {step === 3 && selectedService && (
           <div>
             <h2 className="text-2xl font-semibold mb-4">Scegli Data e Orario</h2>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="date">Seleziona Data</Label>
-                    <Input
-                      id="date"
-                      type="date"
-                      value={selectedDate}
-                      onChange={(e) => setSelectedDate(e.target.value)}
-                      min={new Date().toISOString().split("T")[0]}
-                    />
-                  </div>
 
-                  {selectedDate && (
-                    <div>
-                      <Label>Orari Disponibili</Label>
-                      {loading ? (
-                        <p className="text-sm text-gray-600 mt-2">Caricamento...</p>
-                      ) : availableSlots.length === 0 ? (
-                        <p className="text-sm text-gray-600 mt-2">
-                          Nessun orario disponibile per questa data
-                        </p>
-                      ) : (
-                        <div className="grid grid-cols-3 md:grid-cols-4 gap-2 mt-2">
-                          {availableSlots.map((slot, index) => (
-                            <Button
-                              key={index}
-                              variant="outline"
-                              onClick={() => handleSlotSelect(slot)}
-                              className="text-sm"
-                            >
-                              {slot.start.toLocaleTimeString("it-IT", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </Button>
-                          ))}
-                        </div>
-                      )}
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Calendar Section */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <CalendarIcon className="w-5 h-5" />
+                    Seleziona la Data
+                  </CardTitle>
+                  <CardDescription>
+                    Scegli il giorno della tua visita
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex justify-center">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={setSelectedDate}
+                    disabled={(date) =>
+                      date < new Date(new Date().setHours(0, 0, 0, 0)) ||
+                      date > new Date(new Date().setMonth(new Date().getMonth() + 3))
+                    }
+                    initialFocus
+                    className="rounded-md border"
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Time Slots Section */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Clock className="w-5 h-5" />
+                    Orari Disponibili
+                  </CardTitle>
+                  <CardDescription>
+                    {selectedDate
+                      ? `${selectedDate.toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })}`
+                      : "Seleziona prima una data"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {!selectedDate ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <CalendarIcon className="w-12 h-12 text-gray-300 mb-3" />
+                      <p className="text-sm text-gray-500">
+                        Seleziona una data dal calendario per vedere gli orari disponibili
+                      </p>
+                    </div>
+                  ) : loading ? (
+                    <div className="flex flex-col items-center justify-center py-12">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
+                      <p className="text-sm text-gray-600">Caricamento orari...</p>
+                    </div>
+                  ) : availableSlots.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <Clock className="w-12 h-12 text-gray-300 mb-3" />
+                      <p className="text-sm text-gray-600 font-medium mb-1">
+                        Nessun orario disponibile
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Prova a selezionare un'altra data
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="max-h-[400px] overflow-y-auto space-y-2">
+                      {availableSlots.map((slot, index) => (
+                        <button
+                          key={index}
+                          onClick={() => handleSlotSelect(slot)}
+                          className="w-full flex items-center justify-between p-4 rounded-lg border-2 border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-all group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-blue-100 group-hover:bg-blue-200 flex items-center justify-center transition-colors">
+                              <Clock className="w-5 h-5 text-blue-600" />
+                            </div>
+                            <div className="text-left">
+                              <p className="font-semibold text-gray-900">
+                                {slot.start.toLocaleTimeString("it-IT", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Durata: {selectedService.durationMinutes} min
+                              </p>
+                            </div>
+                          </div>
+                          <CheckCircle2 className="w-5 h-5 text-gray-300 group-hover:text-blue-600 transition-colors" />
+                        </button>
+                      ))}
                     </div>
                   )}
-                </div>
-              </CardContent>
-            </Card>
-            <Button variant="outline" onClick={() => setStep(2)} className="mt-4">
+                </CardContent>
+              </Card>
+            </div>
+
+            <Button variant="outline" onClick={() => setStep(2)} className="mt-6">
               Indietro
             </Button>
           </div>
