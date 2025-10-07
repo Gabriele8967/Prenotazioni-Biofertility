@@ -100,7 +100,7 @@ export async function getAvailableSlots(
     }
 
     const morningStart = 9;
-    const morningEnd = 13;
+    const morningEnd = 12;
     const afternoonStart = 15;
     const afternoonEnd = 18;
 
@@ -196,7 +196,7 @@ function generateDefaultSlots(date: Date, durationMinutes: number) {
   }
 
   const morningStart = 9;
-  const morningEnd = 13;
+  const morningEnd = 12;
   const afternoonStart = 15;
   const afternoonEnd = 18;
   const availableSlots: { start: Date; end: Date }[] = [];
@@ -274,7 +274,7 @@ export async function createCalendarEvent(
     const response = await calendar.events.insert({
       calendarId,
       requestBody: event,
-      sendUpdates: 'all',
+      sendUpdates: 'none',
     });
 
     return response.data;
@@ -316,7 +316,7 @@ export async function updateCalendarEvent(
       calendarId,
       eventId,
       requestBody: event,
-      sendUpdates: 'all',
+      sendUpdates: 'none',
     });
 
     return response.data;
@@ -334,7 +334,7 @@ export async function deleteCalendarEvent(eventId: string, staffEmail: string) {
     await calendar.events.delete({
       calendarId,
       eventId,
-      sendUpdates: 'all',
+      sendUpdates: 'none',
     });
 
     return true;

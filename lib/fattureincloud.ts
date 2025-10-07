@@ -99,12 +99,7 @@ export async function createAndSendInvoice(bookingId: string): Promise<{invoiceI
             description: 'Prestazione sanitaria esente IVA ai sensi dell\'art. 10 DPR 633/72',
             qty: 1,
             net_price: service.price,
-            vat: {
-              id: 0,           // IVA 0% per prestazioni sanitarie
-              value: 0,        // Percentuale 0%
-              description: 'Esente art. 10',
-              ei_type: '10'    // Codice esenzione per prestazioni sanitarie
-            },
+            not_taxable: true,
           },
         ],
         payments_list: [
@@ -121,18 +116,6 @@ export async function createAndSendInvoice(bookingId: string): Promise<{invoiceI
     const invoiceId = createdInvoice.data!.data!.id!;
 
     console.log(`Fattura ${invoiceId} creata per la prenotazione ${bookingId}.`);
-
-    // Invia la fattura via email
-    await issuedDocumentsApi.scheduleEmail(companyId, invoiceId, {
-        data: {
-            sender_email: process.env.ADMIN_EMAIL, // Usa l'email dell'admin come mittente
-            recipient_email: patient.email,
-            subject: `Fattura per la tua prenotazione: ${service.name}`,
-            body: `Gentile ${patient.name},<br><br>in allegato trovi la fattura relativa alla tua prenotazione.<br><br>Grazie,<br>Centro Biofertility<br>{{allegati}}`
-        }
-    });
-
-    console.log(`Fattura ${invoiceId} inviata via email a ${patient.email}.`);
 
     return { invoiceId };
 
