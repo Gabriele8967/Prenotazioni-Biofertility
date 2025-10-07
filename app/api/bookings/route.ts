@@ -17,6 +17,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Troppe richieste. Riprova più tardi." }, { status: 429 });
     }
 
+    const body = await request.json();
     const { serviceId, staffId, startTime, notes,
       patientName, patientEmail, patientPhone, luogoNascita, dataNascita, professione, indirizzo, citta, cap, codiceFiscale, numeroDocumento, scadenzaDocumento, emailComunicazioni,
       partnerData,
