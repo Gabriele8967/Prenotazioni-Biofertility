@@ -89,7 +89,7 @@ export async function getAvailableSlots(
 
     const busySlots = response.data.calendars?.primary?.busy || [];
 
-    // Orario di lavoro: Lun-Ven 9:00-13:00 e 15:00-18:00, Sab 9:00-13:00
+    // Orario di lavoro: Lun-Ven 9:00-12:00 e 15:00-18:00, Sab 9:00-12:00
     const dayOfWeek = date.getDay(); // 0=domenica, 1=lunedì, ..., 6=sabato
     const isSaturday = dayOfWeek === 6;
     const isSunday = dayOfWeek === 0;
@@ -185,7 +185,7 @@ export async function getAvailableSlots(
 
 // Funzione di fallback per generare slot disponibili senza Google Calendar
 function generateDefaultSlots(date: Date, durationMinutes: number) {
-  // Orario di lavoro: Lun-Ven 9:00-13:00 e 15:00-18:00, Sab 9:00-13:00
+  // Orario di lavoro: Lun-Ven 9:00-12:00 e 15:00-18:00, Sab 9:00-12:00
   const dayOfWeek = date.getDay(); // 0=domenica, 1=lunedì, ..., 6=sabato
   const isSaturday = dayOfWeek === 6;
   const isSunday = dayOfWeek === 0;
