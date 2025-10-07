@@ -41,6 +41,16 @@ model User {
   birthDate              DateTime?                 // Data di nascita
   consentSignature       String?                   // Firma digitale consenso (timestamp hash)
 
+  // Dati anagrafici completi (da modulo privacy)
+  luogoNascita           String?
+  professione            String?
+  indirizzo              String?
+  citta                  String?
+  cap                    String?
+  numeroDocumento        String?
+  scadenzaDocumento      DateTime?
+  emailComunicazioni     String?
+
   // Google OAuth2 tokens (per staff members)
   googleAccessToken      String?                   // Token di accesso Google
   googleRefreshToken     String?                   // Token di refresh Google
@@ -78,13 +88,23 @@ model Booking {
   id                String        @id @default(cuid())
   startTime         DateTime
   endTime           DateTime
-  status            String        @default("PENDING")
+  status            String        @default("PENDING") // Potrebbe diventare BookingStatus (PENDING, CONFIRMED, CANCELLED)
   notes             String?       // Note del paziente
   googleEventId     String?       // ID dell'evento su Google Calendar
-  paymentCompleted  Boolean       @default(false)
-  paymentLink       String?       // Link personalizzato per il pagamento
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
+
+  // Campi per pagamento e fatturazione
+  paymentStatus     String @default("PENDING") // Valori possibili: PENDING, PAID, FAILED
+  stripeSessionId   String?       @unique
+  fatturaId         String?       // ID della fattura o ricevuta da Fatture in Cloud
+  partnerData       String?       // Dati del partner in formato JSON (serializzato come stringa)
+
+  // Campi per archiviazione temporanea documenti
+  documentoFrente        String?
+  documentoRetro         String?
+  documentoFrentePartner String?
+  documentoRetroPartner  String?
 
   // Foreign Keys
   patientId         String

@@ -12,219 +12,103 @@ import {
 
 export async function POST(request: NextRequest) {
   try {
-    // 🔒 Rate Limiting (Anti-Spam)
     const clientIP = getClientIP(request.headers);
     if (!checkBookingRateLimit(clientIP)) {
-      logSuspiciousActivity({
-        ip: clientIP,
-        endpoint: '/api/bookings',
-        reason: 'Rate limit exceeded - possibile spam',
-        timestamp: new Date(),
-      });
-      return NextResponse.json(
-        { error: "Troppe richieste. Riprova tra un'ora." },
-        { status: 429 }
-      );
+      return NextResponse.json({ error: "Troppe richieste. Riprova più tardi." }, { status: 429 });
     }
 
     const body = await request.json();
     const {
-      serviceId,
-      staffId,
-      patientEmail,
-      patientName,
-      patientPhone,
-      startTime,
-      notes,
-      // Consensi legali
-      privacyAccepted,
-      medicalConsentAccepted,
-      informedConsentAccepted,
-      termsAccepted,
+      serviceId, staffId, startTime, notes,
+      patientName, patientEmail, patientPhone, luogoNascita, dataNascita, professione, indirizzo, citta, cap, codiceFiscale, numeroDocumento, scadenzaDocumento, emailComunicazioni,
+      partnerData,
+      gdprConsent, privacyConsent,
+      documentoFrente, documentoRetro, documentoFrentePartner, documentoRetroPartner
     } = body;
 
-    // 🔒 Validazione input
-    if (!serviceId || !staffId || !patientEmail || !patientName || !startTime) {
-      return NextResponse.json(
-        { error: "Dati mancanti" },
-        { status: 400 }
-      );
+    if (!serviceId || !staffId || !patientEmail || !patientName || !startTime || !codiceFiscale || !documentoFrente || !documentoRetro) {
+      return NextResponse.json({ error: "Dati anagrafici o di prenotazione mancanti." }, { status: 400 });
     }
 
-    // Validazione email
-    if (!isValidEmail(patientEmail)) {
-      logSuspiciousActivity({
-        ip: clientIP,
-        endpoint: '/api/bookings',
-        reason: 'Invalid email format',
-        timestamp: new Date(),
-      });
-      return NextResponse.json(
-        { error: "Email non valida" },
-        { status: 400 }
-      );
-    }
-
-    // Validazione telefono (se fornito)
-    if (patientPhone && !isValidItalianPhone(patientPhone)) {
-      return NextResponse.json(
-        { error: "Numero di telefono non valido" },
-        { status: 400 }
-      );
-    }
-
-    // Sanitizzazione input
-    const sanitizedName = sanitizeInput(patientName);
-    const sanitizedEmail = sanitizeInput(patientEmail);
-    const sanitizedPhone = patientPhone ? sanitizeInput(patientPhone) : null;
     const sanitizedNotes = notes ? sanitizeInput(notes) : null;
+    const sanitizedData = {
+        name: sanitizeInput(patientName),
+        email: sanitizeInput(patientEmail),
+        phone: patientPhone ? sanitizeInput(patientPhone) : null,
+        luogoNascita: luogoNascita ? sanitizeInput(luogoNascita) : null,
+        professione: professione ? sanitizeInput(professione) : null,
+        indirizzo: indirizzo ? sanitizeInput(indirizzo) : null,
+        citta: citta ? sanitizeInput(citta) : null,
+        cap: cap ? sanitizeInput(cap) : null,
+        fiscalCode: codiceFiscale ? sanitizeInput(codiceFiscale.toUpperCase()) : null,
+        numeroDocumento: numeroDocumento ? sanitizeInput(numeroDocumento) : null,
+        emailComunicazioni: emailComunicazioni ? sanitizeInput(emailComunicazioni) : null,
+    };
 
-    // Recupera informazioni sul servizio
-    const service = await db.service.findUnique({
-      where: { id: serviceId },
-    });
+    const service = await db.service.findUnique({ where: { id: serviceId } });
+    if (!service) return NextResponse.json({ error: "Servizio non trovato" }, { status: 404 });
 
-    if (!service) {
-      return NextResponse.json(
-        { error: "Servizio non trovato" },
-        { status: 404 }
-      );
-    }
+    const staff = await db.user.findUnique({ where: { id: staffId }, select: { email: true } });
+    if (!staff) return NextResponse.json({ error: "Staff non trovato" }, { status: 404 });
 
-    // Recupera informazioni sullo staff
-    const staff = await db.user.findUnique({
-      where: { id: staffId },
-      select: { email: true },
-    });
-
-    if (!staff) {
-      return NextResponse.json(
-        { error: "Staff non trovato" },
-        { status: 404 }
-      );
-    }
-
-    // Calcola endTime
     const start = new Date(startTime);
     const end = new Date(start.getTime() + service.durationMinutes * 60000);
 
-    // Crea o trova il paziente
-    let patient = await db.user.findUnique({
-      where: { email: patientEmail },
-    });
+    const consentSignature = require("crypto").createHash("sha256").update(`${sanitizedData.email}${new Date().toISOString()}${gdprConsent}${privacyConsent}`).digest("hex");
 
-    // Genera firma digitale (hash dei consensi + timestamp)
-    const consentTimestamp = new Date().toISOString();
-    const crypto = require("crypto");
-    const consentSignature = crypto
-      .createHash("sha256")
-      .update(`${sanitizedEmail}${consentTimestamp}${privacyAccepted}${medicalConsentAccepted}${informedConsentAccepted}${termsAccepted}`)
-      .digest("hex");
+    const userPayload = {
+        ...sanitizedData,
+        birthDate: dataNascita ? new Date(dataNascita) : null,
+        scadenzaDocumento: scadenzaDocumento ? new Date(scadenzaDocumento) : null,
+        consentSignature,
+        ipAddress: clientIP,
+        privacyAccepted: gdprConsent,
+        privacyAcceptedAt: gdprConsent ? new Date() : null,
+        dataProcessingConsent: privacyConsent,
+    };
 
-    if (!patient) {
-      const bcrypt = require("bcryptjs");
-      const tempPassword = await bcrypt.hash(Math.random().toString(36), 10);
+    let patient = await db.user.findUnique({ where: { email: sanitizedData.email } });
 
-      patient = await db.user.create({
-        data: {
-          email: sanitizedEmail,
-          name: sanitizedName,
-          phone: sanitizedPhone,
-          password: tempPassword,
-          role: "PATIENT",
-          // Consensi GDPR
-          privacyAccepted: privacyAccepted || false,
-          privacyAcceptedAt: privacyAccepted ? new Date() : null,
-          // Consensi sanitari
-          medicalConsentAccepted: medicalConsentAccepted || false,
-          medicalConsentAt: medicalConsentAccepted ? new Date() : null,
-          informedConsentAccepted: informedConsentAccepted || false,
-          informedConsentAt: informedConsentAccepted ? new Date() : null,
-          termsAccepted: termsAccepted || false,
-          termsAcceptedAt: termsAccepted ? new Date() : null,
-          consentSignature,
-          ipAddress: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown",
-        },
-      });
+    if (patient) {
+      patient = await db.user.update({ where: { id: patient.id }, data: userPayload });
     } else {
-      // Aggiorna consensi se paziente già esistente
-      patient = await db.user.update({
-        where: { id: patient.id },
-        data: {
-          privacyAccepted: privacyAccepted || patient.privacyAccepted,
-          privacyAcceptedAt: privacyAccepted ? new Date() : patient.privacyAcceptedAt,
-          medicalConsentAccepted: medicalConsentAccepted || patient.medicalConsentAccepted,
-          medicalConsentAt: medicalConsentAccepted ? new Date() : patient.medicalConsentAt,
-          informedConsentAccepted: informedConsentAccepted || patient.informedConsentAccepted,
-          informedConsentAt: informedConsentAccepted ? new Date() : patient.informedConsentAt,
-          termsAccepted: termsAccepted || patient.termsAccepted,
-          termsAcceptedAt: termsAccepted ? new Date() : patient.termsAcceptedAt,
-          consentSignature,
-          ipAddress: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown",
-        },
+      const tempPassword = await require("bcryptjs").hash(Math.random().toString(36), 10);
+      patient = await db.user.create({
+        data: { ...userPayload, password: tempPassword, role: "PATIENT" },
       });
     }
 
-    // Crea evento su Google Calendar con tutti i dettagli nel titolo
-    const eventTitle = `${sanitizedName} - ${service.name} - €${service.price} - ${sanitizedEmail} - ${sanitizedPhone || "N/D"}`;
-    const eventDescription = `
-📋 DETTAGLI PRENOTAZIONE
+    let googleEventId: string | undefined = undefined;
+    try {
+        const calendarEvent = await createCalendarEvent(
+            `${sanitizedData.name} - ${service.name}`,
+            `Paziente: ${sanitizedData.name}\nEmail: ${sanitizedData.email}\nTel: ${sanitizedData.phone || 'N/D'}`,
+            start, end, staff.email, sanitizedData.email
+        );
+        googleEventId = calendarEvent.id || undefined;
+    } catch (calendarError) {
+        console.error("⚠️ Errore non bloccante nella creazione dell'evento Google Calendar:", calendarError);
+        // Non bloccare il flusso se la creazione dell'evento fallisce
+    }
 
-👤 Paziente: ${sanitizedName}
-📧 Email: ${sanitizedEmail}
-📱 Telefono: ${sanitizedPhone || "N/D"}
-
-🏥 Servizio: ${service.name}
-💶 Prezzo: €${service.price}
-⏱️ Durata: ${service.durationMinutes} minuti
-
-📝 Note: ${sanitizedNotes || "Nessuna nota"}
-
----
-Sistema Prenotazioni Centro Biofertility
-    `.trim();
-
-    const calendarEvent = await createCalendarEvent(
-      eventTitle,
-      eventDescription,
-      start,
-      end,
-      staff.email, // Staff email for OAuth2 authentication
-      sanitizedEmail // Patient email as attendee
-    );
-
-    // Ottieni link di pagamento dalle impostazioni
-    const paymentSetting = await db.settings.findUnique({
-      where: { key: "payment_link" },
-    });
-
-    // Crea prenotazione
     const booking = await db.booking.create({
       data: {
-        serviceId,
-        staffId,
-        patientId: patient.id,
-        startTime: start,
-        endTime: end,
-        notes: sanitizedNotes,
-        googleEventId: calendarEvent.id || undefined,
-        paymentLink: paymentSetting?.value || process.env.PAYMENT_LINK_URL,
+        serviceId, staffId, patientId: patient.id, startTime: start, endTime: end, notes: sanitizedNotes,
+        googleEventId: googleEventId,
         status: "PENDING",
-      },
-      include: {
-        service: true,
-        staff: true,
-        patient: true,
+        partnerData: partnerData as string | undefined,
+        documentoFrente,
+        documentoRetro,
+        documentoFrentePartner,
+        documentoRetroPartner,
       },
     });
 
     return NextResponse.json(booking);
+
   } catch (error) {
     console.error("Error creating booking:", error);
-    return NextResponse.json(
-      { error: "Errore nella creazione della prenotazione" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Errore imprevisto durante la creazione della prenotazione." }, { status: 500 });
   }
 }
 
