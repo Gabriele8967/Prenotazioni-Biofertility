@@ -17,20 +17,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Troppe richieste. Riprova più tardi." }, { status: 429 });
     }
 
-    const body = await request.json();
-    const {
-      serviceId, staffId, startTime, notes,
+    const { serviceId, staffId, startTime, notes,
       patientName, patientEmail, patientPhone, luogoNascita, dataNascita, professione, indirizzo, citta, cap, codiceFiscale, numeroDocumento, scadenzaDocumento, emailComunicazioni,
       partnerData,
       gdprConsent, privacyConsent,
       documentoFrente, documentoRetro, documentoFrentePartner, documentoRetroPartner
     } = body;
 
-    if (!serviceId || !staffId || !patientEmail || !patientName || !startTime || !codiceFiscale || !documentoFrente || !documentoRetro) {
-      return NextResponse.json({ error: "Dati anagrafici o di prenotazione mancanti." }, { status: 400 });
-    }
-
-    const sanitizedNotes = notes ? sanitizeInput(notes) : null;
+    // Sanitizza i dati prima di usarli
     const sanitizedData = {
         name: sanitizeInput(patientName),
         email: sanitizeInput(patientEmail),
@@ -44,6 +38,20 @@ export async function POST(request: NextRequest) {
         numeroDocumento: numeroDocumento ? sanitizeInput(numeroDocumento) : null,
         emailComunicazioni: emailComunicazioni ? sanitizeInput(emailComunicazioni) : null,
     };
+
+    // Controlla se l'utente esiste già
+    let existingPatient = await db.user.findUnique({ where: { email: sanitizedData.email } });
+    const isReturningUser = !!existingPatient;
+
+    // Validazione dati obbligatori
+    if (!serviceId || !staffId || !sanitizedData.email || !sanitizedData.name || !startTime || !sanitizedData.fiscalCode) {
+      return NextResponse.json({ error: "Dati anagrafici o di prenotazione mancanti." }, { status: 400 });
+    }
+
+    // Richiedi documenti solo per i nuovi utenti
+    if (!isReturningUser && (!documentoFrente || !documentoRetro)) {
+        return NextResponse.json({ error: "Documenti di identità mancanti per il nuovo utente." }, { status: 400 });
+    }
 
     const service = await db.service.findUnique({ where: { id: serviceId } });
     if (!service) return NextResponse.json({ error: "Servizio non trovato" }, { status: 404 });
