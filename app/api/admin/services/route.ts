@@ -62,6 +62,7 @@ export async function POST(request: NextRequest) {
         price: parseFloat(price),
         notes,
         color: color || "#3b82f6",
+        active: true,
         staffMembers: staffIds
           ? {
               connect: staffIds.map((id: string) => ({ id })),
