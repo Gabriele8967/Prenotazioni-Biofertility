@@ -25,6 +25,8 @@ export async function POST(request: NextRequest) {
       documentoFrente, documentoRetro, documentoFrentePartner, documentoRetroPartner
     } = body;
 
+    const sanitizedNotes = notes ? sanitizeInput(notes) : null;
+
     // Sanitizza i dati prima di usarli
     const sanitizedData = {
         name: sanitizeInput(patientName),
