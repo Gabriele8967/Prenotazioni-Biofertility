@@ -506,25 +506,27 @@ export default function BookingPage() {
                     </div>
 
                     {/* Upload Documenti Paziente */}
-                    <div className="border-t pt-6">
-                      <h3 className="font-semibold mb-4">📄 Documenti di Identità *</h3>
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="docFrente">Documento Fronte *</Label>
-                          <div className="mt-2 flex items-center gap-2">
-                            <Input id="docFrente" type="file" accept="image/*" onChange={(e) => setDocumentoFrente(e.target.files?.[0] || null)} required />
-                            {documentoFrente && <CheckCircle2 className="w-5 h-5 text-green-600" />}
+                    {!isReturningUser && (
+                      <div className="border-t pt-6">
+                        <h3 className="font-semibold mb-4">📄 Documenti di Identità *</h3>
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="docFrente">Documento Fronte *</Label>
+                            <div className="mt-2 flex items-center gap-2">
+                              <Input id="docFrente" type="file" accept="image/*" onChange={(e) => setDocumentoFrente(e.target.files?.[0] || null)} required={!isReturningUser} />
+                              {documentoFrente && <CheckCircle2 className="w-5 h-5 text-green-600" />}
+                            </div>
                           </div>
-                        </div>
-                        <div>
-                          <Label htmlFor="docRetro">Documento Retro *</Label>
-                          <div className="mt-2 flex items-center gap-2">
-                            <Input id="docRetro" type="file" accept="image/*" onChange={(e) => setDocumentoRetro(e.target.files?.[0] || null)} required />
-                            {documentoRetro && <CheckCircle2 className="w-5 h-5 text-green-600" />}
+                          <div>
+                            <Label htmlFor="docRetro">Documento Retro *</Label>
+                            <div className="mt-2 flex items-center gap-2">
+                              <Input id="docRetro" type="file" accept="image/*" onChange={(e) => setDocumentoRetro(e.target.files?.[0] || null)} required={!isReturningUser} />
+                              {documentoRetro && <CheckCircle2 className="w-5 h-5 text-green-600" />}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Dati Partner (opzionale) */}
                     <div className="border-t pt-6">
