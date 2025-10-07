@@ -7,10 +7,19 @@ export default function HomePage() {
       <div className="container mx-auto px-4 py-16">
         <div className="text-center mb-16">
           <h1 className="text-5xl font-bold text-gray-900 mb-4">
-            Centro Medico
+            Biofertility
           </h1>
-          <p className="text-xl text-gray-600 mb-8">
-            Sistema di Prenotazione Visite Online
+          <p className="text-xl text-gray-600 mb-4">
+            Centro di Procreazione Medicalmente Assistita
+          </p>
+          <p className="text-lg text-gray-500 mb-2">
+            Diretto dal Prof. Claudio Manna
+          </p>
+          <p className="text-md text-gray-500">
+            Viale degli Eroi di Rodi 214 - Via Velletri 7, Roma
+          </p>
+          <p className="text-md text-gray-500 mb-6">
+            Tel: 06-8415269 | 392-0583277 | 333-5082362
           </p>
         </div>
 

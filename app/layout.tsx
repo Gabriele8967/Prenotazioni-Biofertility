@@ -6,8 +6,8 @@ import CookieBanner from "@/components/CookieBanner";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Centro Medico - Sistema di Prenotazione",
-  description: "Sistema di prenotazione visite mediche online",
+  title: "Biofertility - Centro di Procreazione Medicalmente Assistita",
+  description: "Centro Biofertility a Roma, diretto dal Prof. Claudio Manna. Specializzati in Procreazione Medicalmente Assistita (PMA), diagnosi e terapie per l'infertilità di coppia. Prenota la tua visita online.",
 };
 
 export default function RootLayout({

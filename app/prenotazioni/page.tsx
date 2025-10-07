@@ -518,7 +518,7 @@ export default function BookingPage() {
                           ⚕️ Consenso al Trattamento Dati Sanitari (Art. 9 GDPR) *OBBLIGATORIO*
                         </span>
                         <p className="text-gray-700 mt-1">
-                          Autorizzo espressamente il Centro Medico Biofertility al trattamento dei miei dati relativi alla salute
+                          Autorizzo espressamente il Centro Biofertility al trattamento dei miei dati relativi alla salute
                           (categorie particolari di dati personali ex art. 9 GDPR), necessario per l'erogazione delle prestazioni
                           sanitarie richieste. Tali dati saranno conservati per 10 anni come previsto dalla normativa sanitaria.
                         </p>

@@ -48,8 +48,8 @@ async function main() {
     console.log("Default payment link setting created");
   }
 
-  // Create test staff member
-  const staffEmail = "dott.rossi@test.com";
+  // Create test staff member - Professor Claudio Manna
+  const staffEmail = "prof.manna@biofertility.com";
   const existingStaff = await prisma.user.findUnique({
     where: { email: staffEmail },
   });
@@ -61,39 +61,119 @@ async function main() {
       data: {
         email: staffEmail,
         password: hashedPassword,
-        name: "Dott. Mario Rossi",
+        name: "Prof. Claudio Manna",
         role: "STAFF",
       },
     });
-    console.log(`Test staff member created: ${staffEmail}`);
+    console.log(`Staff member created: ${staffEmail}`);
   } else {
     staffMember = existingStaff;
-    console.log("Test staff member already exists");
+    console.log("Staff member already exists");
   }
 
-  // Create test service
-  const serviceName = "Visita Generale";
-  const existingService = await prisma.service.findFirst({
-    where: { name: serviceName },
-  });
+  // Create fertility services
+  const services = [
+    {
+      name: "Prima Visita di Coppia",
+      description: "Prima valutazione completa della coppia per diagnosi di infertilità, anamnesi dettagliata e prescrizione esami",
+      durationMinutes: 60,
+      price: 150,
+      notes: "Portare eventuali esami precedenti e documentazione medica",
+      color: "#3b82f6",
+    },
+    {
+      name: "Visita Ginecologica di Controllo",
+      description: "Visita ginecologica con ecografia transvaginale per monitoraggio follicolare o controllo",
+      durationMinutes: 30,
+      price: 100,
+      notes: "Eseguire con vescica vuota",
+      color: "#ec4899",
+    },
+    {
+      name: "Ecografia Pelvica 3D/4D",
+      description: "Ecografia tridimensionale/quadridimensionale per studio della cavità uterina e valutazione ovarica",
+      durationMinutes: 45,
+      price: 120,
+      notes: "Eseguire con vescica piena",
+      color: "#8b5cf6",
+    },
+    {
+      name: "Isteroscopia Diagnostica",
+      description: "Esame endoscopico della cavità uterina per diagnosi di patologie endocavitarie",
+      durationMinutes: 30,
+      price: 200,
+      notes: "Eseguire nei giorni dopo il ciclo mestruale",
+      color: "#f59e0b",
+    },
+    {
+      name: "Consulenza PMA (Procreazione Assistita)",
+      description: "Consulenza specialistica per tecniche di Procreazione Medicalmente Assistita (FIVET, ICSI, IUI)",
+      durationMinutes: 60,
+      price: 150,
+      notes: "Portare tutti gli esami e referti precedenti",
+      color: "#10b981",
+    },
+    {
+      name: "Monitoraggio Follicolare",
+      description: "Ecografia per monitoraggio della crescita follicolare durante stimolazione ovarica",
+      durationMinutes: 20,
+      price: 80,
+      notes: "Da eseguire secondo indicazioni del medico",
+      color: "#06b6d4",
+    },
+    {
+      name: "Sonoisterografia",
+      description: "Ecografia con infusione di soluzione salina per valutazione cavità uterina e pervietà tubarica",
+      durationMinutes: 45,
+      price: 180,
+      notes: "Eseguire dopo il ciclo mestruale e prima dell'ovulazione",
+      color: "#ef4444",
+    },
+  ];
 
-  if (!existingService) {
-    await prisma.service.create({
-      data: {
-        name: serviceName,
-        description: "Visita medica generale con controllo completo",
-        durationMinutes: 30,
-        price: 50,
-        notes: "Portare documentazione medica precedente se disponibile",
-        active: true,
-        staffMembers: {
-          connect: { id: staffMember.id },
-        },
-      },
+  for (const serviceData of services) {
+    const existingService = await prisma.service.findFirst({
+      where: { name: serviceData.name },
     });
-    console.log(`Test service created: ${serviceName}`);
-  } else {
-    console.log("Test service already exists");
+
+    if (!existingService) {
+      await prisma.service.create({
+        data: {
+          ...serviceData,
+          active: true,
+          staffMembers: {
+            connect: { id: staffMember.id },
+          },
+        },
+      });
+      console.log(`Service created: ${serviceData.name}`);
+    }
+  }
+
+  // Create contact settings
+  const contactSettings = [
+    { key: "center_name", value: "Biofertility - Centro di Procreazione Medicalmente Assistita" },
+    { key: "center_address_1", value: "Viale degli Eroi di Rodi 214, Roma" },
+    { key: "center_address_2", value: "Via Velletri 7, 00198 Roma" },
+    { key: "center_phone_1", value: "06-8415269" },
+    { key: "center_phone_2", value: "392-0583277" },
+    { key: "center_phone_3", value: "333-5082362" },
+    { key: "center_email", value: "centrimanna2@gmail.com" },
+    { key: "director_name", value: "Prof. Claudio Manna" },
+    { key: "opening_hours", value: "Lun-Ven: 9:00-13:00 / 15:00-18:00, Sab: 9:00-13:00" },
+  ];
+
+  for (const setting of contactSettings) {
+    const existing = await prisma.settings.findUnique({
+      where: { key: setting.key },
+    });
+
+    if (!existing) {
+      await prisma.settings.create({
+        data: setting,
+      });
+      console.log(`Setting created: ${setting.key}`);
+    }
   }
 
   console.log("Seed completed!");

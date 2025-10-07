@@ -89,14 +89,25 @@ export async function getAvailableSlots(
 
     const busySlots = response.data.calendars?.primary?.busy || [];
 
-    // Orario di lavoro: 9:00 - 19:00
-    const workStart = 9;
-    const workEnd = 19;
+    // Orario di lavoro: Lun-Ven 9:00-13:00 e 15:00-18:00, Sab 9:00-13:00
+    const dayOfWeek = date.getDay(); // 0=domenica, 1=lunedì, ..., 6=sabato
+    const isSaturday = dayOfWeek === 6;
+    const isSunday = dayOfWeek === 0;
+
+    // Nessun orario disponibile la domenica
+    if (isSunday) {
+      return [];
+    }
+
+    const morningStart = 9;
+    const morningEnd = 13;
+    const afternoonStart = 15;
+    const afternoonEnd = 18;
 
     const availableSlots: { start: Date; end: Date }[] = [];
 
-    // Genera slot ogni 30 minuti
-    for (let hour = workStart; hour < workEnd; hour++) {
+    // Genera slot ogni 30 minuti per la mattina (9-13)
+    for (let hour = morningStart; hour < morningEnd; hour++) {
       for (let minute of [0, 30]) {
         const slotStart = new Date(date);
         slotStart.setHours(hour, minute, 0, 0);
@@ -107,8 +118,8 @@ export async function getAvailableSlots(
         // Controlla se lo slot è nel futuro
         if (slotStart < new Date()) continue;
 
-        // Controlla se lo slot supera l'orario di lavoro
-        if (slotEnd.getHours() >= workEnd) continue;
+        // Controlla se lo slot supera l'orario di lavoro mattutino
+        if (slotEnd.getHours() > morningEnd || (slotEnd.getHours() === morningEnd && slotEnd.getMinutes() > 0)) continue;
 
         // Controlla sovrapposizioni con intervalli occupati
         const hasConflict = busySlots.some((busy) => {
@@ -128,6 +139,41 @@ export async function getAvailableSlots(
       }
     }
 
+    // Genera slot ogni 30 minuti per il pomeriggio (15-18) solo se non è sabato
+    if (!isSaturday) {
+      for (let hour = afternoonStart; hour < afternoonEnd; hour++) {
+        for (let minute of [0, 30]) {
+          const slotStart = new Date(date);
+          slotStart.setHours(hour, minute, 0, 0);
+
+          const slotEnd = new Date(slotStart);
+          slotEnd.setMinutes(slotEnd.getMinutes() + durationMinutes);
+
+          // Controlla se lo slot è nel futuro
+          if (slotStart < new Date()) continue;
+
+          // Controlla se lo slot supera l'orario di lavoro pomeridiano
+          if (slotEnd.getHours() > afternoonEnd || (slotEnd.getHours() === afternoonEnd && slotEnd.getMinutes() > 0)) continue;
+
+          // Controlla sovrapposizioni con intervalli occupati
+          const hasConflict = busySlots.some((busy) => {
+            const busyStart = new Date(busy.start!);
+            const busyEnd = new Date(busy.end!);
+
+            return (
+              (slotStart >= busyStart && slotStart < busyEnd) ||
+              (slotEnd > busyStart && slotEnd <= busyEnd) ||
+              (slotStart <= busyStart && slotEnd >= busyEnd)
+            );
+          });
+
+          if (!hasConflict) {
+            availableSlots.push({ start: slotStart, end: slotEnd });
+          }
+        }
+      }
+    }
+
     return availableSlots;
   } catch (error) {
     console.error('Error fetching available slots:', error);
@@ -139,11 +185,24 @@ export async function getAvailableSlots(
 
 // Funzione di fallback per generare slot disponibili senza Google Calendar
 function generateDefaultSlots(date: Date, durationMinutes: number) {
-  const workStart = 9;
-  const workEnd = 19;
+  // Orario di lavoro: Lun-Ven 9:00-13:00 e 15:00-18:00, Sab 9:00-13:00
+  const dayOfWeek = date.getDay(); // 0=domenica, 1=lunedì, ..., 6=sabato
+  const isSaturday = dayOfWeek === 6;
+  const isSunday = dayOfWeek === 0;
+
+  // Nessun orario disponibile la domenica
+  if (isSunday) {
+    return [];
+  }
+
+  const morningStart = 9;
+  const morningEnd = 13;
+  const afternoonStart = 15;
+  const afternoonEnd = 18;
   const availableSlots: { start: Date; end: Date }[] = [];
 
-  for (let hour = workStart; hour < workEnd; hour++) {
+  // Genera slot ogni 30 minuti per la mattina (9-13)
+  for (let hour = morningStart; hour < morningEnd; hour++) {
     for (let minute of [0, 30]) {
       const slotStart = new Date(date);
       slotStart.setHours(hour, minute, 0, 0);
@@ -152,9 +211,27 @@ function generateDefaultSlots(date: Date, durationMinutes: number) {
       slotEnd.setMinutes(slotEnd.getMinutes() + durationMinutes);
 
       if (slotStart < new Date()) continue;
-      if (slotEnd.getHours() >= workEnd) continue;
+      if (slotEnd.getHours() > morningEnd || (slotEnd.getHours() === morningEnd && slotEnd.getMinutes() > 0)) continue;
 
       availableSlots.push({ start: slotStart, end: slotEnd });
+    }
+  }
+
+  // Genera slot ogni 30 minuti per il pomeriggio (15-18) solo se non è sabato
+  if (!isSaturday) {
+    for (let hour = afternoonStart; hour < afternoonEnd; hour++) {
+      for (let minute of [0, 30]) {
+        const slotStart = new Date(date);
+        slotStart.setHours(hour, minute, 0, 0);
+
+        const slotEnd = new Date(slotStart);
+        slotEnd.setMinutes(slotEnd.getMinutes() + durationMinutes);
+
+        if (slotStart < new Date()) continue;
+        if (slotEnd.getHours() > afternoonEnd || (slotEnd.getHours() === afternoonEnd && slotEnd.getMinutes() > 0)) continue;
+
+        availableSlots.push({ start: slotStart, end: slotEnd });
+      }
     }
   }
 
