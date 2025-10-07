@@ -94,11 +94,17 @@ export async function createAndSendInvoice(bookingId: string): Promise<{invoiceI
         date: new Date().toISOString().slice(0, 10), // Data odierna
         items_list: [
           {
-            product_id: parseInt(service.id.substring(0, 8), 16), // Usa una parte dell'ID come product ID
+            product_id: parseInt(service.id.substring(0, 8), 16),
             name: service.name,
+            description: 'Prestazione sanitaria esente IVA ai sensi dell\'art. 10 DPR 633/72',
             qty: 1,
             net_price: service.price,
-            vat: { id: 20000 }, // Assumiamo IVA 22% (ID 0). Da configurare. ID 20000 per esente art. 15
+            vat: {
+              id: 0,           // IVA 0% per prestazioni sanitarie
+              value: 0,        // Percentuale 0%
+              description: 'Esente art. 10',
+              ei_type: '10'    // Codice esenzione per prestazioni sanitarie
+            },
           },
         ],
         payments_list: [
