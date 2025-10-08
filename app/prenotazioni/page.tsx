@@ -316,13 +316,30 @@ export default function BookingPage() {
     e.preventDefault();
     if (!selectedService || !selectedStaff || !selectedSlot) return;
 
+    // Validazione dimensione file (max 5MB per file)
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+    const checkFileSize = (file: File | null, name: string) => {
+      if (file && file.size > MAX_FILE_SIZE) {
+        alert(`Il file "${name}" è troppo grande (${(file.size / 1024 / 1024).toFixed(2)}MB). Max 5MB per file.`);
+        return false;
+      }
+      return true;
+    };
+
+    if (!checkFileSize(documentoFrente, "Documento Fronte")) return;
+    if (!checkFileSize(documentoRetro, "Documento Retro")) return;
+    if (!checkFileSize(documentoFrentePartner, "Documento Fronte Partner")) return;
+    if (!checkFileSize(documentoRetroPartner, "Documento Retro Partner")) return;
+
     setLoading(true);
     try {
       // Converti i file in base64
+      console.log("🔄 Conversione documenti in base64...");
       const docFronteBase64 = documentoFrente ? await fileToBase64(documentoFrente) : null;
       const docRetroBase64 = documentoRetro ? await fileToBase64(documentoRetro) : null;
       const docFrontePartnerBase64 = documentoFrentePartner ? await fileToBase64(documentoFrentePartner) : null;
       const docRetroPartnerBase64 = documentoRetroPartner ? await fileToBase64(documentoRetroPartner) : null;
+      console.log("✅ Conversione completata");
 
       // Prepara i dati del partner se incluso
       const partnerData = includePartner ? {
@@ -340,6 +357,16 @@ export default function BookingPage() {
         telefonoPartner,
         emailPartner
       } : null;
+
+      console.log("📤 Invio prenotazione al server...");
+      console.log("📋 Dati:", {
+        serviceId: selectedService.id,
+        staffId: selectedStaff,
+        patientEmail,
+        hasDocFrente: !!docFronteBase64,
+        hasDocRetro: !!docRetroBase64,
+        includePartner
+      });
 
       const res = await fetch("/api/bookings", {
         method: "POST",
@@ -392,14 +419,17 @@ export default function BookingPage() {
           // Redirect a Stripe
           window.location.href = checkoutData.url;
         } else {
-          alert("Errore nella creazione della sessione di pagamento");
+          console.error("❌ Errore checkout:", checkoutData);
+          alert("Errore nella creazione della sessione di pagamento: " + (checkoutData.error || 'Errore sconosciuto'));
         }
       } else {
-        alert("Errore nella prenotazione: " + booking.error);
+        console.error("❌ Errore prenotazione:", booking);
+        alert("Errore nella prenotazione: " + (booking.error || 'Errore sconosciuto'));
       }
     } catch (error) {
-      alert("Errore nella prenotazione");
-      console.error(error);
+      console.error("❌ Errore critico durante prenotazione:", error);
+      console.error("Stack trace:", error instanceof Error ? error.stack : 'N/D');
+      alert("Errore nella prenotazione. Controlla la console per i dettagli o contatta l'assistenza.");
     } finally {
       setLoading(false);
     }

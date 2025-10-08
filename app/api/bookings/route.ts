@@ -12,12 +12,16 @@ import {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log("📥 [BOOKING] Nuova richiesta di prenotazione ricevuta");
+
     const clientIP = getClientIP(request.headers);
     if (!checkBookingRateLimit(clientIP)) {
+      console.error("❌ [BOOKING] Rate limit superato per IP:", clientIP);
       return NextResponse.json({ error: "Troppe richieste. Riprova più tardi." }, { status: 429 });
     }
 
     const body = await request.json();
+    console.log("✅ [BOOKING] Body parsato correttamente");
     const { serviceId, staffId, startTime, notes,
       patientName, patientEmail, patientPhone, luogoNascita, dataNascita, professione, indirizzo, citta, cap, codiceFiscale, numeroDocumento, scadenzaDocumento, emailComunicazioni,
       partnerData,
@@ -48,11 +52,13 @@ export async function POST(request: NextRequest) {
 
     // Validazione dati obbligatori
     if (!serviceId || !staffId || !sanitizedData.email || !sanitizedData.name || !startTime || !sanitizedData.fiscalCode) {
+      console.error("❌ [BOOKING] Dati mancanti:", { serviceId: !!serviceId, staffId: !!staffId, email: !!sanitizedData.email, name: !!sanitizedData.name, startTime: !!startTime, fiscalCode: !!sanitizedData.fiscalCode });
       return NextResponse.json({ error: "Dati anagrafici o di prenotazione mancanti." }, { status: 400 });
     }
 
     // Richiedi documenti solo per i nuovi utenti
     if (!isReturningUser && (!documentoFrente || !documentoRetro)) {
+        console.error("❌ [BOOKING] Documenti mancanti per nuovo utente:", sanitizedData.email);
         return NextResponse.json({ error: "Documenti di identità mancanti per il nuovo utente." }, { status: 400 });
     }
 
@@ -108,9 +114,60 @@ export async function POST(request: NextRequest) {
 
     let googleEventId: string | undefined = undefined;
     try {
+        // Costruisci una descrizione completa con tutti i dati del form
+        const descriptionParts = [
+            `👤 DATI ANAGRAFICI`,
+            `Nome: ${sanitizedData.name}`,
+            `Email: ${sanitizedData.email}`,
+            `Telefono: ${sanitizedData.phone || 'N/D'}`,
+            `Codice Fiscale: ${sanitizedData.fiscalCode || 'N/D'}`,
+            `Data di nascita: ${dataNascita ? new Date(dataNascita).toLocaleDateString('it-IT') : 'N/D'}`,
+            `Luogo di nascita: ${sanitizedData.luogoNascita || 'N/D'}`,
+            `Professione: ${sanitizedData.professione || 'N/D'}`,
+            ``,
+            `📍 INDIRIZZO`,
+            `Via: ${sanitizedData.indirizzo || 'N/D'}`,
+            `Città: ${sanitizedData.citta || 'N/D'}`,
+            `CAP: ${sanitizedData.cap || 'N/D'}`,
+            ``,
+            `📄 DOCUMENTO`,
+            `Numero: ${sanitizedData.numeroDocumento || 'N/D'}`,
+            `Scadenza: ${scadenzaDocumento ? new Date(scadenzaDocumento).toLocaleDateString('it-IT') : 'N/D'}`,
+            ``,
+            `📧 COMUNICAZIONI`,
+            `Email comunicazioni: ${sanitizedData.emailComunicazioni || sanitizedData.email}`,
+        ];
+
+        // Aggiungi dati partner se presenti
+        if (partnerData) {
+            try {
+                const partner = JSON.parse(partnerData);
+                descriptionParts.push(
+                    ``,
+                    `👥 DATI PARTNER`,
+                    `Nome: ${partner.name || 'N/D'}`,
+                    `Email: ${partner.email || 'N/D'}`,
+                    `Telefono: ${partner.phone || 'N/D'}`,
+                    `Codice Fiscale: ${partner.fiscalCode || 'N/D'}`,
+                    `Data di nascita: ${partner.dataNascita ? new Date(partner.dataNascita).toLocaleDateString('it-IT') : 'N/D'}`,
+                    `Luogo di nascita: ${partner.luogoNascita || 'N/D'}`
+                );
+            } catch (e) {
+                console.error('Errore parsing partnerData:', e);
+            }
+        }
+
+        // Aggiungi note se presenti
+        if (sanitizedNotes) {
+            descriptionParts.push(``, `📝 NOTE`, sanitizedNotes);
+        }
+
+        // Titolo evento: Nome Cognome - Tipo Visita (chiaramente visibile nel calendario)
+        const eventTitle = `${sanitizedData.name} - ${service.name}`;
+        
         const calendarEvent = await createGoogleCalendarEvent(
-            `${sanitizedData.name} - ${service.name}`,
-            `Paziente: ${sanitizedData.name}\nEmail: ${sanitizedData.email}\nTel: ${sanitizedData.phone || 'N/D'}`,
+            eventTitle,
+            descriptionParts.join('\n'),
             start, end, staff.email, sanitizedData.email
         );
         googleEventId = calendarEvent.id || undefined;
@@ -135,8 +192,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(booking);
 
   } catch (error) {
-    console.error("Error creating booking:", error);
-    return NextResponse.json({ error: "Errore imprevisto durante la creazione della prenotazione." }, { status: 500 });
+    console.error("❌ [BOOKING] Errore critico durante la creazione della prenotazione:", error);
+    if (error instanceof Error) {
+      console.error("❌ [BOOKING] Messaggio errore:", error.message);
+      console.error("❌ [BOOKING] Stack trace:", error.stack);
+    }
+    return NextResponse.json({
+      error: "Errore imprevisto durante la creazione della prenotazione.",
+      details: error instanceof Error ? error.message : 'Errore sconosciuto'
+    }, { status: 500 });
   }
 }
 
