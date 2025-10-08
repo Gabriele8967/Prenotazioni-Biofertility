@@ -254,7 +254,7 @@ export async function sendBookingConfirmationToClient(bookingId: string) {
                                                     <p style="color: #78350f; margin: 0; font-size: 14px; line-height: 1.6;">
                                                         Contattaci per qualsiasi informazione:<br>
                                                         <strong>Email:</strong> centrimanna2@gmail.com<br>
-                                                        <strong>Telefono:</strong> [Inserire numero]
+                                                        <strong>Telefono:</strong> 06 841 5269
                                                     </p>
                                                 </td>
                                             </tr>
