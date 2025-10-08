@@ -438,33 +438,49 @@ export default function BookingPage() {
                   </TabsTrigger>
                 ))}
               </TabsList>
-              {Object.entries(groupedServices).map(([category, servicesInCategory]) => (
-                <TabsContent key={category} value={category} className="mt-0">
-                  <div className="mb-4 text-center">
-                    <h3 className="text-lg font-semibold text-gray-800">{category}</h3>
-                    <p className="text-sm text-gray-500 mt-1">{servicesInCategory.length} {servicesInCategory.length === 1 ? 'servizio disponibile' : 'servizi disponibili'}</p>
-                  </div>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {servicesInCategory.map((service) => (
-                      <Card key={service.id} className="cursor-pointer hover:shadow-lg hover:border-blue-400 transition-all duration-200 border-2" onClick={() => handleServiceSelect(service)}>
-                        <CardHeader>
-                          <CardTitle className="text-lg">{service.name}</CardTitle>
-                          {service.description && <CardDescription>{service.description}</CardDescription>}
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-2 text-sm">
-                            <p className="flex items-center gap-2 text-gray-600">
-                              <Clock className="w-4 h-4 text-blue-600" />
-                              {service.durationMinutes} minuti
-                            </p>
-                            <p className="font-bold text-xl text-blue-600">€{service.price.toFixed(2)}</p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </TabsContent>
-              ))}
+              {Object.entries(groupedServices).map(([category, servicesInCategory]) => {
+                // Ordina i servizi: Prima visita ginecologica, poi Seconda visita ginecologica, poi gli altri
+                const sortedServices = [...servicesInCategory].sort((a, b) => {
+                  const isPrimaA = a.name.toLowerCase().includes('prima visita ginecologica');
+                  const isPrimaB = b.name.toLowerCase().includes('prima visita ginecologica');
+                  const isSecondaA = a.name.toLowerCase().includes('seconda visita ginecologica');
+                  const isSecondaB = b.name.toLowerCase().includes('seconda visita ginecologica');
+                  
+                  if (isPrimaA) return -1;
+                  if (isPrimaB) return 1;
+                  if (isSecondaA) return -1;
+                  if (isSecondaB) return 1;
+                  return 0;
+                });
+
+                return (
+                  <TabsContent key={category} value={category} className="mt-0">
+                    <div className="mb-4 text-center">
+                      <h3 className="text-lg font-semibold text-gray-800">{category}</h3>
+                      <p className="text-sm text-gray-500 mt-1">{servicesInCategory.length} {servicesInCategory.length === 1 ? 'servizio disponibile' : 'servizi disponibili'}</p>
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {sortedServices.map((service) => (
+                        <Card key={service.id} className="cursor-pointer hover:shadow-lg hover:border-blue-400 transition-all duration-200 border-2" onClick={() => handleServiceSelect(service)}>
+                          <CardHeader>
+                            <CardTitle className="text-lg">{service.name}</CardTitle>
+                            {service.description && <CardDescription>{service.description}</CardDescription>}
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-2 text-sm">
+                              <p className="flex items-center gap-2 text-gray-600">
+                                <Clock className="w-4 h-4 text-blue-600" />
+                                {service.durationMinutes} minuti
+                              </p>
+                              <p className="font-bold text-xl text-blue-600">€{service.price.toFixed(2)}</p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </TabsContent>
+                );
+              })}
             </Tabs>
           </div>
         )}
