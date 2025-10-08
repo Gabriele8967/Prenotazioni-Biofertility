@@ -24,6 +24,7 @@ async function getOrCreateClient(companyId: number, patient: any): Promise<numbe
 
   console.log(`[FATTURA_TRACE] 6. getOrCreateClient chiamata con email: ${patient.email}`);
   console.log(`[FATTURA_TRACE] 7. getOrCreateClient chiamata con nome: ${patient.name}`);
+  console.log(`[FATTURA_TRACE] 8. getOrCreateClient chiamata con CF: ${patient.fiscalCode}`);
 
   // 1. Cerca per Email (più univoco in questo contesto)
   if (patient.email) {
@@ -38,14 +39,19 @@ async function getOrCreateClient(companyId: number, patient: any): Promise<numbe
         }
       );
       if (response.data && response.data.data && response.data.data.length > 0) {
-        return response.data.data[0].id;
+        const clientId = response.data.data[0].id;
+        console.log(`[FATTURA_TRACE] 9. Cliente trovato per EMAIL su FiC: ID ${clientId}`);
+        return clientId;
+      } else {
+        console.log(`[FATTURA_TRACE] 9. Nessun cliente trovato per EMAIL ${patient.email} su FiC`);
       }
     } catch (error: any) {
       console.warn('Errore durante la ricerca cliente per email:', error.response?.data || error.message);
     }
   }
 
-  // 2. Se non trovato, cerca per Codice Fiscale
+  // 2. Se non trovato per email, cerca per Codice Fiscale
+  // MA se lo troviamo, aggiorniamo l'email per evitare discrepanze
   if (patient.fiscalCode) {
     try {
       const response = await axios.get(
@@ -58,7 +64,45 @@ async function getOrCreateClient(companyId: number, patient: any): Promise<numbe
         }
       );
       if (response.data && response.data.data && response.data.data.length > 0) {
-        return response.data.data[0].id;
+        const existingClient = response.data.data[0];
+        const clientId = existingClient.id;
+        
+        console.log(`[FATTURA_TRACE] 10. Cliente trovato per CF su FiC: ID ${clientId}, Email esistente: ${existingClient.email}`);
+        
+        // IMPORTANTE: Se l'email è diversa, aggiorniamo il cliente
+        if (existingClient.email !== patient.email) {
+          console.warn(`[FATTURA_TRACE] ⚠️  ATTENZIONE: Email diversa! FiC ha "${existingClient.email}", noi abbiamo "${patient.email}"`);
+          console.log(`[FATTURA_TRACE] 11. Aggiornamento email del cliente su Fatture in Cloud...`);
+          
+          try {
+            await axios.put(
+              `${FIC_API_URL}/c/${companyId}/entities/clients/${clientId}`,
+              {
+                data: {
+                  email: patient.email,
+                  name: patient.name,
+                  phone: patient.phone,
+                  address_street: patient.indirizzo,
+                  address_postal_code: patient.cap,
+                  address_city: patient.citta,
+                }
+              },
+              {
+                headers: {
+                  'Authorization': `Bearer ${FIC_ACCESS_TOKEN}`,
+                  'Content-Type': 'application/json'
+                }
+              }
+            );
+            console.log(`[FATTURA_TRACE] 12. Cliente aggiornato con successo su FiC`);
+          } catch (updateError: any) {
+            console.error('Errore durante aggiornamento cliente:', updateError.response?.data || updateError.message);
+          }
+        }
+        
+        return clientId;
+      } else {
+        console.log(`[FATTURA_TRACE] 10. Nessun cliente trovato per CF ${patient.fiscalCode} su FiC`);
       }
     } catch (error: any) {
       console.warn('Errore durante la ricerca cliente per codice fiscale:', error.response?.data || error.message);
