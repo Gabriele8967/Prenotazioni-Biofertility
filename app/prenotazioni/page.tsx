@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar as CalendarIcon, Clock, User, CheckCircle2, Loader2, UploadCloud } from "lucide-react";
+import { format } from 'date-fns';
 import { Calendar } from "@/components/ui/calendar";
 
 type Service = {
@@ -16,9 +17,19 @@ type Service = {
   price: number;
   notes: string | null;
   staffMembers: Array<{ id: string; name: string; email: string; }>;
+  category: string | null;
+};
+
+type Location = {
+  id: string;
+  name: string;
+  address: string;
+  hours: Record<string, string[]>;
 };
 
 type TimeSlot = { start: Date; end: Date; };
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Helper per convertire file in base64
 const fileToBase64 = (file: File): Promise<string> => {
@@ -41,15 +52,28 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 export default function BookingPage() {
+  console.log('BookingPage rendered');
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedStaff, setSelectedStaff] = useState<string>("");
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [bookingComplete, setBookingComplete] = useState(false);
+
+  const groupedServices = services.reduce((acc, service) => {
+    const category = service.category || 'Altro'; // Default category if none is provided
+    if (category === 'Analisi') return acc; // Exclude 'Analisi' category
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(service);
+    return acc;
+  }, {} as Record<string, Service[]>);
 
   // Controllo utente esistente
   const [checkingUser, setCheckingUser] = useState(false);
@@ -105,7 +129,27 @@ export default function BookingPage() {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('payment_success')) setBookingComplete(true);
     fetchServices();
+    fetchLocations();
   }, []);
+
+  const fetchLocations = async () => {
+    try {
+      const res = await fetch("/api/settings/locations");
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setLocations(data);
+        if (data.length > 0) {
+          setSelectedLocation(data[0]); // Select first location by default
+        }
+      } else {
+        console.error("API error fetching locations:", data);
+        setLocations([]);
+      }
+    } catch (error) {
+      console.error("Error fetching locations:", error);
+      setLocations([]);
+    }
+  };
 
   // Check utente esistente quando l'email cambia (con debounce)
   useEffect(() => {
@@ -173,16 +217,20 @@ export default function BookingPage() {
   };
 
   const fetchAvailableSlots = useCallback(async () => {
-    if (!selectedService || !selectedDate || !selectedStaff) return;
+    if (!selectedService || !selectedDate || !selectedStaff || !selectedLocation) return;
+
+    console.log('selectedService in fetchAvailableSlots', selectedService);
+    console.log('selectedStaff in fetchAvailableSlots', selectedStaff);
 
     setLoading(true);
     try {
       const staffMember = selectedService.staffMembers.find(s => s.id === selectedStaff);
-      const dateStr = selectedDate.toISOString().split("T")[0];
+      const dateStr = format(selectedDate, 'yyyy-MM-dd');
       const res = await fetch(
-        `/api/available-slots?date=${dateStr}&duration=${selectedService.durationMinutes}&staffEmail=${staffMember?.email}`
+        `/api/available-slots?date=${dateStr}&duration=${selectedService.durationMinutes}&staffEmail=${staffMember?.email}&locationId=${selectedLocation.id}`
       );
       const data = await res.json();
+      console.log('data from api', data);
       setAvailableSlots(data.map((slot: any) => ({
         start: new Date(slot.start),
         end: new Date(slot.end),
@@ -192,15 +240,20 @@ export default function BookingPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedService, selectedDate, selectedStaff]);
+  }, [selectedService, selectedDate, selectedStaff, selectedLocation]);
 
   useEffect(() => {
-    if (selectedDate && selectedService && selectedStaff) {
+    if (selectedDate && selectedService && selectedStaff && selectedLocation) {
       fetchAvailableSlots();
     }
-  }, [selectedDate, selectedService, selectedStaff, fetchAvailableSlots]);
+  }, [selectedDate, selectedService, selectedStaff, selectedLocation, fetchAvailableSlots]);
+
+  useEffect(() => {
+    console.log('availableSlots updated', availableSlots);
+  }, [availableSlots]);
 
   const handleServiceSelect = (service: Service) => {
+    console.log('selectedService', service);
     setSelectedService(service);
     setSelectedStaff("");
     setSelectedDate(undefined);
@@ -346,7 +399,7 @@ export default function BookingPage() {
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-12">
       <div className="container mx-auto px-4 max-w-4xl">
         <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold mb-2">Prenota la tua Visita</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold mb-2">Prenota la tua Visita</h1>
           <p className="text-gray-600">Segui i passaggi per completare la prenotazione</p>
         </div>
 
@@ -367,39 +420,98 @@ export default function BookingPage() {
         {/* Step 1: Select Service */}
         {step === 1 && (
           <div>
-            <h2 className="text-2xl font-semibold mb-4">Scegli la Visita</h2>
-            <div className="grid md:grid-cols-2 gap-4">
-              {services.map((service) => (
-                <Card key={service.id} className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleServiceSelect(service)}>
-                  <CardHeader>
-                    <CardTitle>{service.name}</CardTitle>
-                    {service.description && <CardDescription>{service.description}</CardDescription>}
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2 text-sm">
-                      <p className="flex items-center gap-2"><Clock className="w-4 h-4" />{service.durationMinutes} minuti</p>
-                      <p className="font-semibold text-lg">€{service.price}</p>
-                    </div>
-                  </CardContent>
-                </Card>
+            <h2 className="text-xl sm:text-2xl font-semibold mb-4">Scegli la Visita</h2>
+            <Tabs defaultValue="Prestazioni Biofertility" className="w-full">
+              <TabsList className="flex flex-wrap gap-2 h-auto bg-transparent justify-center mb-6">
+                {Object.keys(groupedServices).sort((a, b) => {
+                  // "Prestazioni Biofertility" sempre per prima
+                  if (a === "Prestazioni Biofertility") return -1;
+                  if (b === "Prestazioni Biofertility") return 1;
+                  return a.localeCompare(b);
+                }).map((category) => (
+                  <TabsTrigger 
+                    key={category} 
+                    value={category} 
+                    className="px-6 py-3 text-sm font-medium text-gray-700 bg-white border-2 border-gray-200 rounded-full data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:border-blue-600 data-[state=active]:shadow-md hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 whitespace-nowrap"
+                  >
+                    {category}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              {Object.entries(groupedServices).map(([category, servicesInCategory]) => (
+                <TabsContent key={category} value={category} className="mt-0">
+                  <div className="mb-4 text-center">
+                    <h3 className="text-lg font-semibold text-gray-800">{category}</h3>
+                    <p className="text-sm text-gray-500 mt-1">{servicesInCategory.length} {servicesInCategory.length === 1 ? 'servizio disponibile' : 'servizi disponibili'}</p>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {servicesInCategory.map((service) => (
+                      <Card key={service.id} className="cursor-pointer hover:shadow-lg hover:border-blue-400 transition-all duration-200 border-2" onClick={() => handleServiceSelect(service)}>
+                        <CardHeader>
+                          <CardTitle className="text-lg">{service.name}</CardTitle>
+                          {service.description && <CardDescription>{service.description}</CardDescription>}
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2 text-sm">
+                            <p className="flex items-center gap-2 text-gray-600">
+                              <Clock className="w-4 h-4 text-blue-600" />
+                              {service.durationMinutes} minuti
+                            </p>
+                            <p className="font-bold text-xl text-blue-600">€{service.price.toFixed(2)}</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </TabsContent>
               ))}
-            </div>
+            </Tabs>
           </div>
         )}
 
-        {/* Step 2: Select Staff */}
+        {/* Step 2: Select Staff and Location */}
         {step === 2 && selectedService && (
           <div>
-            <h2 className="text-2xl font-semibold mb-4">Scegli l&apos;Operatore</h2>
-            <div className="grid md:grid-cols-2 gap-4">
-              {selectedService.staffMembers.map((staff) => (
-                <Card key={staff.id} className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleStaffSelect(staff.id)}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><User className="w-5 h-5" />{staff.name}</CardTitle>
-                  </CardHeader>
-                </Card>
-              ))}
+            <h2 className="text-xl sm:text-2xl font-semibold mb-4">Scegli la Sede e l&apos;Operatore</h2>
+
+            {/* Location Selection */}
+            <div className="mb-6">
+              <Label htmlFor="location-select" className="block text-lg font-medium text-gray-700 mb-2">Seleziona la Sede</Label>
+              <select
+                id="location-select"
+                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                value={selectedLocation?.id || ''}
+                onChange={(e) => {
+                  const loc = locations.find(l => l.id === e.target.value);
+                  setSelectedLocation(loc || null);
+                  setSelectedStaff(""); // Reset staff selection when location changes
+                }}
+              >
+                <option value="" disabled>Seleziona una sede</option>
+                {locations.map((loc) => (
+                  <option key={loc.id} value={loc.id}>
+                    {loc.name} - {loc.address}
+                  </option>
+                ))}
+              </select>
             </div>
+
+            {/* Staff Selection */}
+            {selectedLocation && (
+              <div className="mt-8">
+                <h3 className="text-xl font-semibold mb-4">Scegli l&apos;Operatore</h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {selectedService.staffMembers.map((staff) => (
+                    <Card key={staff.id} className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleStaffSelect(staff.id)}>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><User className="w-5 h-5" />{staff.name}</CardTitle>
+                      </CardHeader>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <Button variant="outline" onClick={() => setStep(1)} className="mt-4">Indietro</Button>
           </div>
         )}
@@ -407,7 +519,7 @@ export default function BookingPage() {
         {/* Step 3: Select Date & Time */}
         {step === 3 && selectedService && (
           <div>
-            <h2 className="text-2xl font-semibold mb-4">Scegli Data e Orario</h2>
+            <h2 className="text-xl sm:text-2xl font-semibold mb-4">Scegli Data e Orario</h2>
             <div className="grid md:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
@@ -415,7 +527,10 @@ export default function BookingPage() {
                   <CardDescription>Scegli il giorno della tua visita</CardDescription>
                 </CardHeader>
                 <CardContent className="flex justify-center">
-                  <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0)) || date > new Date(new Date().setMonth(new Date().getMonth() + 3))} initialFocus className="rounded-md border" />
+                  <Calendar mode="single" selected={selectedDate} onSelect={(date) => {
+                    console.log('onSelect date', date);
+                    setSelectedDate(date);
+                  }} disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0)) || date > new Date(new Date().setMonth(new Date().getMonth() + 2)) || (selectedLocation?.id === 'viale_eroi_di_rodi' && date.getDay() !== 3)} initialFocus className="rounded-md border" />
                 </CardContent>
               </Card>
 
