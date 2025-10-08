@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { createCalendarEvent } from "@/lib/google-calendar";
+import { createGoogleCalendarEvent } from "@/lib/google-calendar";
 import {
   checkBookingRateLimit,
   getClientIP,
@@ -78,20 +78,37 @@ export async function POST(request: NextRequest) {
         dataProcessingConsent: privacyConsent,
     };
 
+    console.log(`[BOOKING_TRACE] 1. Email ricevuta dal form: ${sanitizedData.email}`);
+
     let patient = await db.user.findUnique({ where: { email: sanitizedData.email } });
 
     if (patient) {
+      console.log(`[BOOKING_TRACE] 2. Trovato utente esistente con ID: ${patient.id} e email: ${patient.email} e ruolo: ${patient.role}`);
+      
+      // IMPORTANTE: Non permettere di sovrascrivere utenti ADMIN o STAFF
+      if (patient.role === 'ADMIN' || patient.role === 'STAFF') {
+        console.error(`[BOOKING_TRACE] ERRORE: Tentativo di sovrascrivere un utente ${patient.role} con email ${patient.email}`);
+        return NextResponse.json({ 
+          error: "Questa email è già associata a un account amministrativo. Usa un'altra email per la prenotazione." 
+        }, { status: 400 });
+      }
+      
       patient = await db.user.update({ where: { id: patient.id }, data: userPayload });
+      console.log(`[BOOKING_TRACE] 3. Utente aggiornato. Email attuale: ${patient.email}`);
     } else {
       const tempPassword = await require("bcryptjs").hash(Math.random().toString(36), 10);
+      console.log(`[BOOKING_TRACE] 2. Nessun utente esistente. Creazione nuovo utente con email: ${userPayload.email}`);
       patient = await db.user.create({
         data: { ...userPayload, password: tempPassword, role: "PATIENT" },
       });
+      console.log(`[BOOKING_TRACE] 3. Creato nuovo utente con ID: ${patient.id} e email: ${patient.email}`);
     }
+
+    console.log(`[BOOKING_TRACE] 4. ID paziente da associare alla prenotazione: ${patient.id}`);
 
     let googleEventId: string | undefined = undefined;
     try {
-        const calendarEvent = await createCalendarEvent(
+        const calendarEvent = await createGoogleCalendarEvent(
             `${sanitizedData.name} - ${service.name}`,
             `Paziente: ${sanitizedData.name}\nEmail: ${sanitizedData.email}\nTel: ${sanitizedData.phone || 'N/D'}`,
             start, end, staff.email, sanitizedData.email
