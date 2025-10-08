@@ -15,6 +15,19 @@ function getCompanyId(): number {
 }
 
 /**
+ * Recupera l'ID del conto di pagamento dalle variabili d'ambiente.
+ * Se non configurato, usa il valore di default (1 = Conto Corrente).
+ */
+function getPaymentAccountId(): number {
+  const paymentAccountId = process.env.FATTUREINCLOUD_PAYMENT_ACCOUNT_ID;
+  if (!paymentAccountId) {
+    console.warn('FATTUREINCLOUD_PAYMENT_ACCOUNT_ID non configurato, usando ID di default (1)');
+    return 1; // Default: Conto Corrente
+  }
+  return parseInt(paymentAccountId, 10);
+}
+
+/**
  * Cerca un cliente per codice fiscale o email, altrimenti lo crea.
  * @returns L'ID del cliente in Fatture in Cloud.
  */
@@ -39,8 +52,48 @@ async function getOrCreateClient(companyId: number, patient: any): Promise<numbe
         }
       );
       if (response.data && response.data.data && response.data.data.length > 0) {
-        const clientId = response.data.data[0].id;
+        const existingClient = response.data.data[0];
+        const clientId = existingClient.id;
         console.log(`[FATTURA_TRACE] 9. Cliente trovato per EMAIL su FiC: ID ${clientId}`);
+        
+        // Aggiorna i dati del cliente se necessario
+        const needsUpdate = (
+          existingClient.name !== patient.name ||
+          existingClient.phone !== patient.phone ||
+          existingClient.address_street !== patient.indirizzo ||
+          existingClient.address_postal_code !== patient.cap ||
+          existingClient.address_city !== patient.citta
+        );
+
+        if (needsUpdate) {
+          console.log(`[FATTURA_TRACE] 9.1. Aggiornamento dati cliente trovato per email...`);
+          
+          try {
+            await axios.put(
+              `${FIC_API_URL}/c/${companyId}/entities/clients/${clientId}`,
+              {
+                data: {
+                  email: patient.email,
+                  name: patient.name,
+                  phone: patient.phone,
+                  address_street: patient.indirizzo,
+                  address_postal_code: patient.cap,
+                  address_city: patient.citta,
+                }
+              },
+              {
+                headers: {
+                  'Authorization': `Bearer ${FIC_ACCESS_TOKEN}`,
+                  'Content-Type': 'application/json'
+                }
+              }
+            );
+            console.log(`[FATTURA_TRACE] 9.2. Cliente aggiornato con successo su FiC`);
+          } catch (updateError: any) {
+            console.error('Errore durante aggiornamento cliente:', updateError.response?.data || updateError.message);
+          }
+        }
+        
         return clientId;
       } else {
         console.log(`[FATTURA_TRACE] 9. Nessun cliente trovato per EMAIL ${patient.email} su FiC`);
@@ -69,10 +122,18 @@ async function getOrCreateClient(companyId: number, patient: any): Promise<numbe
         
         console.log(`[FATTURA_TRACE] 10. Cliente trovato per CF su FiC: ID ${clientId}, Email esistente: ${existingClient.email}`);
         
-        // IMPORTANTE: Se l'email è diversa, aggiorniamo il cliente
-        if (existingClient.email !== patient.email) {
-          console.warn(`[FATTURA_TRACE] ⚠️  ATTENZIONE: Email diversa! FiC ha "${existingClient.email}", noi abbiamo "${patient.email}"`);
-          console.log(`[FATTURA_TRACE] 11. Aggiornamento email del cliente su Fatture in Cloud...`);
+        // IMPORTANTE: Aggiorniamo sempre i dati del cliente per assicurarci che siano aggiornati
+        const needsUpdate = (
+          existingClient.email !== patient.email ||
+          existingClient.name !== patient.name ||
+          existingClient.phone !== patient.phone ||
+          existingClient.address_street !== patient.indirizzo ||
+          existingClient.address_postal_code !== patient.cap ||
+          existingClient.address_city !== patient.citta
+        );
+
+        if (needsUpdate) {
+          console.log(`[FATTURA_TRACE] 11. Aggiornamento dati cliente su Fatture in Cloud...`);
           
           try {
             await axios.put(
@@ -181,12 +242,21 @@ export async function createAndSendInvoice(bookingId: string): Promise<{invoiceI
     }
 
     const clientId = await getOrCreateClient(companyId, patient);
+    const paymentAccountId = getPaymentAccountId();
 
     // Crea la fattura
     const invoiceData = {
       data: {
         type: 'invoice',
-        entity: { id: clientId, name: patient.name }, // Collega al cliente esistente o appena creato
+        entity: { 
+          id: clientId, 
+          name: patient.name,
+          // Includi l'indirizzo del paziente nella fattura
+          address_street: patient.indirizzo || '',
+          address_postal_code: patient.cap || '',
+          address_city: patient.citta || '',
+          country: 'IT'
+        },
         date: new Date().toISOString().slice(0, 10), // Data odierna
         language: { code: 'it' },
         currency: { id: 'EUR', exchange_rate: '1.00000', symbol: '€' },
@@ -207,7 +277,7 @@ export async function createAndSendInvoice(bookingId: string): Promise<{invoiceI
                 amount: service.price,
                 due_date: new Date().toISOString().slice(0, 10),
                 status: 'paid',
-                payment_account: { id: 1 }, // Placeholder: 1 = Conto Corrente (esempio). SOSTITUIRE CON ID REALE!
+                payment_account: { id: paymentAccountId }, // ID del conto di pagamento configurabile
             }
         ],
         show_payment_method: true,

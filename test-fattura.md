@@ -57,6 +57,7 @@ Dopo il pagamento, controlla:
 ### Su Fatture in Cloud:
 - [ ] Fattura creata automaticamente
 - [ ] Cliente creato/aggiornato con dati corretti
+- [ ] **Indirizzo del paziente incluso nella fattura**
 - [ ] Importo e descrizione corretti
 - [ ] Stato "Pagata"
 - [ ] Email inviata al cliente
@@ -81,6 +82,8 @@ WHERE id = 'ID_BOOKING';
 ### Vercel Environment Variables:
 ```
 FATTUREINCLOUD_ACCESS_TOKEN=a/eyJ0eXAiOiJKV1QiLCJhbGc...
+FATTUREINCLOUD_COMPANY_ID=12345
+FATTUREINCLOUD_PAYMENT_ACCOUNT_ID=1
 STRIPE_SECRET_KEY=sk_live_...
 STRIPE_WEBHOOK_SECRET=whsec_... (dalla dashboard Stripe)
 GMAIL_USER=centrimanna2@gmail.com
