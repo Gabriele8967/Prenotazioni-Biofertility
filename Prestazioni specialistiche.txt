@@ -1,0 +1,170 @@
+ Cateogria: Prestazioni specialistiche BIOFERTILITY
+Ordina Servizi:
+Biopsia endometriale per Plasmacellule + Datazione (ID: 108)
+
+Durata: 40min
+
+Prezzo: €450.00
+Seconda visita (ID: 107)
+
+Durata: 40min
+
+Prezzo: €100.00
+Seconda Visita con ECO (ID: 106)
+
+Durata: 40min
+
+Prezzo: €150.00
+Seconda visita (ID: 104)
+
+Durata: 1h
+
+Prezzo: €100.00
+Visita ginecologica (ID: 3)
+
+Durata: 2h
+
+Prezzo: €180.00
+ISTEROSCOPIA (ID: 84)
+
+Durata: 20min
+
+Prezzo: €250.00
+Biopsia endometriale per plasmacellule (ID: 85)
+
+Durata: 15min
+
+Prezzo: €220.00
+Biopsia datazione endometrio (finestra di impianto) (ID: 86)
+
+Durata: 30min
+
+Prezzo: €300.00
+SCRATCH ENDOMETRIO (ID: 87)
+
+Durata: 15min
+
+Prezzo: €100.00
+SCRATCH ENDOMETRIALE + PROVA TRANSFER (ID: 99)
+
+Durata: 30min
+
+Prezzo: €150.00
+MONITORAGGIO FOLLICOLARE (ID: 88)
+
+Durata: 15min
+
+Prezzo: €200.00
+Monitoraggio ecografico per pazienti esterne (ID: 89)
+
+Durata: 15min
+
+Prezzo: €350.00
+Ecografia ginecologica (ID: 90)
+
+Durata: 30min
+
+Prezzo: €50.00
+Ecografia ostetrica del primo trimestre (ID: 91)
+
+Durata: 30min
+
+Prezzo: €100.00
+ISTEROSONOSALPINGOGRAFIA (ID: 92)
+
+Durata: 30min
+
+Prezzo: €300.00
+SPERMIOGRAMMA (ID: 93)
+
+Durata: 30min
+
+Prezzo: €80.00
+FRAMMENTAZIONE DNA SPERMATICO (ID: 94)
+
+Durata: 30min
+
+Prezzo: €160.00
+VISITA ANDROLOGICA PER INFERTILITA' (ID: 95)
+
+Durata: 1h
+
+Prezzo: €150.00
+ECOCOLOR DOPPLER SCROTALE (ID: 96)
+
+Durata: 30min
+
+Prezzo: €80.00
+VISITA UROLOGICA (ID: 97)
+
+Durata: 1h
+
+Prezzo: €150.00
+Aspirazione cisti ovariche (ID: 83)
+
+Durata: 30min
+
+Prezzo: €250.00
+PRP ENDOMETRIALE (ID: 98)
+
+Durata: 1h
+
+Prezzo: €650.00
+
+-------------------
+
+Categoria : Tamponi e PAP-TEST
+Ordina Servizi:
+PAP-TEST (ID: 63)
+
+Durata: 20min
+
+Prezzo: €60.00
+Tampone clamidia (ID: 61)
+
+Durata: 10min
+
+Prezzo: €45.00
+Tampone germi comuni (ID: 60)
+
+Durata: 10min
+
+Prezzo: €50.00
+Tampone micoplasma (ID: 62)
+
+Durata: 10min
+
+Prezzo: €35.00
+
+-------------
+
+Categoria: 
+
+Secondo colloquio online (ID: 105)
+Durata: 1h
+
+Prezzo: €65.00
+Consulto ginecologico - online (ID: 17)
+
+Durata: 1h 30min
+
+Prezzo: €120.00
+
+------------
+ Categioria Analisi:
+Ordina Servizi:
+Altre analisi (ID: 59)
+
+Durata: 10min
+
+Prezzo: €0.00
+Ormonali (ID: 36)
+
+Durata: 10min
+
+Prezzo: €15.00
+Pacchetto analisi pre ICSI (ID: 47)
+
+Durata: 10min
+
+Prezzo: €650.00

@@ -76,6 +76,7 @@ model Service {
   color           String    @default("#3b82f6") // Colore per il calendario
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+  category        String?
 
   // Relations
   staffMembers    User[]    @relation("StaffServices")

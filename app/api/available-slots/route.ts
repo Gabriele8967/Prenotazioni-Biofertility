@@ -7,10 +7,11 @@ export async function GET(request: NextRequest) {
     const dateStr = searchParams.get("date");
     const durationStr = searchParams.get("duration");
     const staffEmail = searchParams.get("staffEmail");
+    const locationId = searchParams.get("locationId");
 
-    if (!dateStr || !durationStr) {
+    if (!dateStr || !durationStr || !locationId) {
       return NextResponse.json(
-        { error: "Data e durata richiesti" },
+        { error: "Data, durata e sede richiesti" },
         { status: 400 }
       );
     }
@@ -21,7 +22,8 @@ export async function GET(request: NextRequest) {
     const slots = await getAvailableSlots(
       date,
       duration,
-      staffEmail || undefined
+      staffEmail || undefined,
+      locationId
     );
 
     return NextResponse.json(slots);

@@ -64,6 +64,8 @@ export default function BookingPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [bookingComplete, setBookingComplete] = useState(false);
+  const [datesWithSlots, setDatesWithSlots] = useState<Date[]>([]);
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
 
   const groupedServices = services.reduce((acc, service) => {
     const category = service.category || 'Altro'; // Default category if none is provided
@@ -241,6 +243,46 @@ export default function BookingPage() {
       setLoading(false);
     }
   }, [selectedService, selectedDate, selectedStaff, selectedLocation]);
+
+  // Funzione per trovare i prossimi giorni con disponibilità
+  const findDatesWithAvailability = useCallback(async () => {
+    if (!selectedService || !selectedStaff || !selectedLocation) return;
+
+    setCheckingAvailability(true);
+    const datesFound: Date[] = [];
+    const staffMember = selectedService.staffMembers.find(s => s.id === selectedStaff);
+    
+    // Controlla i prossimi 60 giorni
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    for (let i = 0; i < 60 && datesFound.length < 10; i++) {
+      const checkDate = new Date(today);
+      checkDate.setDate(today.getDate() + i);
+      
+      // Salta se non è un giorno lavorativo per la sede
+      if (selectedLocation.id === 'viale_eroi_di_rodi' && checkDate.getDay() !== 3) {
+        continue;
+      }
+      
+      try {
+        const dateStr = format(checkDate, 'yyyy-MM-dd');
+        const res = await fetch(
+          `/api/available-slots?date=${dateStr}&duration=${selectedService.durationMinutes}&staffEmail=${staffMember?.email}&locationId=${selectedLocation.id}`
+        );
+        const data = await res.json();
+        
+        if (data.length > 0) {
+          datesFound.push(checkDate);
+        }
+      } catch (error) {
+        console.error("Error checking availability:", error);
+      }
+    }
+    
+    setDatesWithSlots(datesFound);
+    setCheckingAvailability(false);
+  }, [selectedService, selectedStaff, selectedLocation]);
 
   useEffect(() => {
     if (selectedDate && selectedService && selectedStaff && selectedLocation) {
@@ -540,13 +582,22 @@ export default function BookingPage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg"><CalendarIcon className="w-5 h-5" />Seleziona la Data</CardTitle>
-                  <CardDescription>Scegli il giorno della tua visita</CardDescription>
+                  <CardDescription>Scegli il giorno della tua visita (puoi cambiare mese)</CardDescription>
                 </CardHeader>
                 <CardContent className="flex justify-center">
-                  <Calendar mode="single" selected={selectedDate} onSelect={(date) => {
-                    console.log('onSelect date', date);
-                    setSelectedDate(date);
-                  }} disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0)) || date > new Date(new Date().setMonth(new Date().getMonth() + 2)) || (selectedLocation?.id === 'viale_eroi_di_rodi' && date.getDay() !== 3)} initialFocus className="rounded-md border" />
+                  <Calendar 
+                    mode="single" 
+                    selected={selectedDate} 
+                    onSelect={(date) => {
+                      console.log('onSelect date', date);
+                      setSelectedDate(date);
+                    }} 
+                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0)) || date > new Date(new Date().setMonth(new Date().getMonth() + 3)) || (selectedLocation?.id === 'viale_eroi_di_rodi' && date.getDay() !== 3)} 
+                    initialFocus 
+                    className="rounded-md border"
+                    fromDate={new Date()}
+                    toDate={new Date(new Date().setMonth(new Date().getMonth() + 3))}
+                  />
                 </CardContent>
               </Card>
 
@@ -569,8 +620,54 @@ export default function BookingPage() {
                   ) : availableSlots.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                       <Clock className="w-12 h-12 text-gray-300 mb-3" />
-                      <p className="text-sm text-gray-600 font-medium mb-1">Nessun orario disponibile</p>
-                      <p className="text-xs text-gray-500">Prova a selezionare un'altra data</p>
+                      <p className="text-sm text-gray-600 font-medium mb-2">Nessun orario disponibile</p>
+                      <p className="text-xs text-gray-500 mb-4">Prova a selezionare un'altra data</p>
+                      
+                      {!checkingAvailability && datesWithSlots.length === 0 && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={findDatesWithAvailability}
+                          className="mt-2"
+                        >
+                          🔍 Trova prossimi giorni disponibili
+                        </Button>
+                      )}
+                      
+                      {checkingAvailability && (
+                        <div className="flex items-center gap-2 text-sm text-blue-600">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                          Ricerca in corso...
+                        </div>
+                      )}
+                      
+                      {datesWithSlots.length > 0 && (
+                        <div className="mt-4 p-4 bg-blue-50 rounded-lg w-full">
+                          <p className="text-sm font-semibold text-blue-900 mb-3">📅 Prossimi giorni disponibili:</p>
+                          <div className="flex flex-wrap gap-2 justify-center">
+                            {datesWithSlots.map((date, idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => {
+                                  setSelectedDate(date);
+                                  setDatesWithSlots([]);
+                                }}
+                                className="px-3 py-2 bg-white border-2 border-blue-200 rounded-lg hover:border-blue-500 hover:bg-blue-100 transition-colors text-sm font-medium text-blue-900"
+                              >
+                                {date.toLocaleDateString("it-IT", { weekday: 'short', day: 'numeric', month: 'short' })}
+                              </button>
+                            ))}
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => setDatesWithSlots([])}
+                            className="mt-3 text-xs"
+                          >
+                            Nascondi
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="max-h-[400px] overflow-y-auto space-y-2">

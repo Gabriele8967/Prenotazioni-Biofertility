@@ -62,7 +62,8 @@ export async function POST(request: NextRequest) {
 
     } catch (error) {
       console.error(`❌ Errore nel processo post-pagamento per la prenotazione ${bookingId}:`, error);
-      return NextResponse.json({ error: 'Errore durante il processo post-pagamento' }, { status: 500 });
+      // Non rilanciare l'errore e rispondi 200 a Stripe per evitare retry
+      return NextResponse.json({ received: true });
     
     } finally {
         // 5. CANCELLAZIONE DATI SENSIBILI (SEMPRE E COMUNQUE)
