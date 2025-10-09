@@ -14,9 +14,19 @@ export default function TerminiCondizioni() {
               </h2>
               <p>
                 Il presente documento disciplina l'utilizzo del sistema di prenotazione online
-                del Centro Medico Biofertility (di seguito "il Centro" o "il Titolare").
+                di <strong>JUNIOR S.R.L.</strong> (Centro Biofertility) - di seguito "il Centro" o "il Titolare".
               </p>
-              <p>
+              <p className="mt-2">
+                <strong>Dati del Titolare:</strong><br />
+                Ragione sociale: JUNIOR S.R.L.<br />
+                Sede legale: Viale Eroi di Rodi 214, 00128 Roma (RM)<br />
+                Sede operativa: Via Velletri 7, 00198 Roma (RM)<br />
+                P.IVA: 05470161000 - C.F.: 05470161000<br />
+                PEC: juniorsrlroma@pec.it<br />
+                Email: centrimanna2@gmail.com<br />
+                Telefono: 06 841 5269
+              </p>
+              <p className="mt-2">
                 Il servizio consente agli utenti di prenotare visite mediche specialistiche e
                 prestazioni sanitarie erogate dal Centro, attraverso la piattaforma digitale
                 accessibile all'indirizzo https://prenotazioni-biofertility.vercel.app
@@ -92,10 +102,21 @@ export default function TerminiCondizioni() {
 
             <section>
               <h2 className="text-2xl font-semibold mb-4">
-                5. Cancellazioni e Modifiche
+                5. Diritto di Recesso e Cancellazioni
               </h2>
-              <h3 className="text-xl font-semibold mt-4 mb-2">5.1 Cancellazione da parte del Paziente</h3>
-              <ul className="list-disc pl-6">
+              <h3 className="text-xl font-semibold mt-4 mb-2">5.1 Diritto di Recesso (Art. 52-59 Codice del Consumo)</h3>
+              <p>
+                Ai sensi dell&apos;art. 59 comma 1 lett. c) del D.Lgs. 206/2005 (Codice del Consumo),
+                <strong> il diritto di recesso è escluso per le prestazioni sanitarie programmate per una data specifica</strong>.
+              </p>
+              <p className="mt-2">
+                Il paziente, completando la prenotazione, accetta espressamente che la prestazione venga
+                erogata prima del termine di 14 giorni previsto per il recesso e rinuncia al diritto di
+                recesso stesso, fatta salva la possibilità di cancellazione secondo le condizioni di seguito indicate.
+              </p>
+
+              <h3 className="text-xl font-semibold mt-4 mb-2">5.2 Cancellazione da parte del Paziente</h3>
+              <ul className="list-disc pl-6 space-y-2">
                 <li>
                   <strong>Più di 24 ore prima</strong>: Cancellazione gratuita, rimborso totale (se pagato)
                 </li>
@@ -106,8 +127,11 @@ export default function TerminiCondizioni() {
                   <strong>Mancata presentazione (no-show)</strong>: Addebito della tariffa intera
                 </li>
               </ul>
+              <p className="mt-3 text-sm bg-yellow-50 p-3 rounded border-l-4 border-yellow-400">
+                ℹ️ Per richiedere la cancellazione, contattare il Centro via email o telefono agli indirizzi indicati nella sezione 12.
+              </p>
 
-              <h3 className="text-xl font-semibold mt-4 mb-2">5.2 Cancellazione da parte del Centro</h3>
+              <h3 className="text-xl font-semibold mt-4 mb-2">5.3 Cancellazione da parte del Centro</h3>
               <p>
                 Il Centro si riserva il diritto di cancellare o riprogrammare l'appuntamento per:
               </p>
@@ -233,12 +257,14 @@ export default function TerminiCondizioni() {
               </p>
               <div className="bg-gray-50 p-4 rounded-lg mt-3">
                 <p>
-                  <strong>Centro Medico Biofertility</strong>
+                  <strong>JUNIOR S.R.L. - Centro Biofertility</strong>
                 </p>
-                <p>Via Velletri 7, Roma</p>
-                <p>Tel: 068415269</p>
-                <p>Email: info@biofertility.it</p>
-                <p>PEC: centrobio fertility@pec.it (esempio)</p>
+                <p>Sede legale: Viale Eroi di Rodi 214, 00128 Roma (RM)</p>
+                <p>Sede operativa: Via Velletri 7, 00198 Roma (RM)</p>
+                <p>Tel: 06 841 5269</p>
+                <p>Email: centrimanna2@gmail.com</p>
+                <p>PEC: juniorsrlroma@pec.it</p>
+                <p>P.IVA: 05470161000</p>
               </div>
             </section>
 

@@ -9,11 +9,13 @@ export default function PrivacyPolicyPage() {
           <section>
             <h2 className="text-2xl font-semibold mb-3">1. Titolare del Trattamento</h2>
             <p>
-              Il Titolare del trattamento dei dati è: <strong>[Nome Centro Medico]</strong><br />
-              Sede legale: [Indirizzo completo]<br />
-              P.IVA: [Partita IVA]<br />
-              Email: [email]<br />
-              PEC: [PEC]
+              Il Titolare del trattamento dei dati è: <strong>JUNIOR S.R.L.</strong> (Centro Biofertility)<br />
+              Sede legale: Viale Eroi di Rodi 214, 00128 Roma (RM)<br />
+              Sede operativa: Via Velletri 7, 00198 Roma (RM)<br />
+              P.IVA: 05470161000<br />
+              Codice Fiscale: 05470161000<br />
+              Email: centrimanna2@gmail.com<br />
+              PEC: juniorsrlroma@pec.it
             </p>
           </section>
 
@@ -98,9 +100,10 @@ export default function PrivacyPolicyPage() {
             <h2 className="text-2xl font-semibold mb-3">9. Come Esercitare i Diritti</h2>
             <p>Per esercitare i tuoi diritti, puoi contattarci tramite:</p>
             <ul className="list-disc pl-6 space-y-2">
-              <li>Email: <a href="mailto:privacy@example.com" className="text-blue-600 hover:underline">privacy@example.com</a></li>
-              <li>PEC: <a href="mailto:pec@example.com" className="text-blue-600 hover:underline">pec@example.com</a></li>
-              <li>Posta: [Indirizzo completo]</li>
+              <li>Email: <a href="mailto:centrimanna2@gmail.com" className="text-blue-600 hover:underline">centrimanna2@gmail.com</a></li>
+              <li>PEC: <a href="mailto:juniorsrlroma@pec.it" className="text-blue-600 hover:underline">juniorsrlroma@pec.it</a></li>
+              <li>Telefono: 06 841 5269</li>
+              <li>Posta: JUNIOR S.R.L., Viale Eroi di Rodi 214, 00128 Roma (RM)</li>
             </ul>
             <p className="mt-3">Risponderemo entro 30 giorni dalla ricezione della richiesta.</p>
           </section>
@@ -134,11 +137,12 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold mb-3">14. DPO (Data Protection Officer)</h2>
+            <h2 className="text-2xl font-semibold mb-3">14. Responsabile della Protezione Dati</h2>
             <p>
-              Puoi contattare il nostro Data Protection Officer per qualsiasi questione relativa ai tuoi dati personali:<br />
-              Email: dpo@example.com<br />
-              [Se nominato, altrimenti rimuovere questa sezione]
+              <strong>JUNIOR S.R.L.</strong>, in quanto struttura sanitaria con meno di 250 dipendenti e trattamento dati sanitari non su larga scala, non è obbligata alla nomina di un DPO (Data Protection Officer) ai sensi dell&apos;art. 37 GDPR.
+            </p>
+            <p className="mt-2">
+              Per qualsiasi questione relativa alla protezione dei dati personali, contattare direttamente il Titolare del Trattamento agli indirizzi indicati nella sezione 9.
             </p>
           </section>
         </div>

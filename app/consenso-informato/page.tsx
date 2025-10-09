@@ -13,13 +13,21 @@ export default function ConsensoInformato() {
                 1. Identificazione della Struttura Sanitaria
               </h2>
               <p>
-                <strong>Denominazione</strong>: Centro Medico Biofertility
+                <strong>Ragione Sociale</strong>: JUNIOR S.R.L. (Centro Biofertility)
                 <br />
-                <strong>Indirizzo</strong>: Via Velletri 7, Roma
+                <strong>Sede Legale</strong>: Viale Eroi di Rodi 214, 00128 Roma (RM)
                 <br />
-                <strong>Telefono</strong>: 068415269
+                <strong>Sede Operativa</strong>: Via Velletri 7, 00198 Roma (RM)
                 <br />
-                <strong>Email</strong>: info@biofertility.it
+                <strong>P.IVA</strong>: 05470161000
+                <br />
+                <strong>Telefono</strong>: 06 841 5269
+                <br />
+                <strong>Email</strong>: centrimanna2@gmail.com
+                <br />
+                <strong>PEC</strong>: juniorsrlroma@pec.it
+                <br />
+                <strong>Amministratore Unico e Direttore Sanitario</strong>: Prof. Claudio Manna
               </p>
             </section>
 
@@ -136,9 +144,13 @@ export default function ConsensoInformato() {
                 revoca.
               </p>
               <p className="mt-2">
-                La revoca può essere comunicata via email a: privacy@biofertility.it o tramite
-                raccomandata A/R all'indirizzo della struttura.
+                La revoca può essere comunicata via:
               </p>
+              <ul className="list-disc pl-6 mt-2">
+                <li>Email: centrimanna2@gmail.com</li>
+                <li>PEC: juniorsrlroma@pec.it</li>
+                <li>Raccomandata A/R a: JUNIOR S.R.L., Viale Eroi di Rodi 214, 00128 Roma (RM)</li>
+              </ul>
             </section>
 
             <section>
@@ -183,7 +195,10 @@ export default function ConsensoInformato() {
             <div className="mt-8 pt-6 border-t border-gray-200 text-center text-sm text-gray-600">
               <p>Ultimo aggiornamento: {new Date().toLocaleDateString('it-IT')}</p>
               <p className="mt-2">
-                Per informazioni: privacy@biofertility.it | Tel. 068415269
+                <strong>JUNIOR S.R.L. - Centro Biofertility</strong>
+              </p>
+              <p className="mt-1">
+                Per informazioni: centrimanna2@gmail.com | Tel. 06 841 5269 | PEC: juniorsrlroma@pec.it
               </p>
             </div>
           </div>
