@@ -60,16 +60,57 @@ function deduceCountryCode(cap?: string | null, phone?: string | null): string {
 }
 
 /**
- * Recupera l'ID del conto di pagamento dalle variabili d'ambiente.
- * Se non configurato, usa il valore di default (1 = Conto Corrente).
+ * Recupera l'ID del conto di pagamento appropriato per Stripe/carta.
+ * Cerca automaticamente un conto con "stripe", "carta" o "card" nel nome.
+ * Se configurato FATTUREINCLOUD_PAYMENT_ACCOUNT_ID, usa quello.
+ * Altrimenti cerca dinamicamente o usa il primo disponibile.
  */
-function getPaymentAccountId(): number {
-  const paymentAccountId = process.env.FATTUREINCLOUD_PAYMENT_ACCOUNT_ID;
-  if (!paymentAccountId) {
-    console.warn('FATTUREINCLOUD_PAYMENT_ACCOUNT_ID non configurato, usando ID di default (1)');
-    return 1; // Default: Conto Corrente
+async function getPaymentAccountId(): Promise<number> {
+  const configuredId = process.env.FATTUREINCLOUD_PAYMENT_ACCOUNT_ID;
+  if (configuredId) {
+    return parseInt(configuredId, 10);
   }
-  return parseInt(paymentAccountId, 10);
+
+  // Recupera la lista dei conti e cerca uno appropriato per Stripe
+  const FIC_ACCESS_TOKEN = process.env.FATTUREINCLOUD_ACCESS_TOKEN;
+  const companyId = getCompanyId();
+
+  try {
+    const response = await axios.get(
+      `https://api-v2.fattureincloud.it/c/${companyId}/settings/payment_accounts`,
+      {
+        headers: {
+          'Authorization': `Bearer ${FIC_ACCESS_TOKEN}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    const accounts = response.data.data;
+    if (accounts && accounts.length > 0) {
+      // Cerca un conto appropriato per pagamenti con carta/Stripe
+      let selectedAccount = accounts.find((acc: any) =>
+        acc.name.toLowerCase().includes('stripe') ||
+        acc.name.toLowerCase().includes('carta') ||
+        acc.name.toLowerCase().includes('card')
+      );
+
+      // Se non trovato, usa il primo disponibile
+      if (!selectedAccount) {
+        selectedAccount = accounts[0];
+        console.warn(`⚠️  Nessun conto Stripe/Carta trovato, usando: ${selectedAccount.name} (ID: ${selectedAccount.id})`);
+      } else {
+        console.log(`✅ Conto pagamento per Stripe: ${selectedAccount.name} (ID: ${selectedAccount.id})`);
+      }
+
+      return selectedAccount.id;
+    }
+  } catch (error) {
+    console.error('❌ Errore recupero conti di pagamento, usando default:', error);
+  }
+
+  console.warn('FATTUREINCLOUD_PAYMENT_ACCOUNT_ID non configurato, usando ID di default (1)');
+  return 1; // Fallback
 }
 
 /**
@@ -342,7 +383,7 @@ export async function createAndSendInvoice(bookingId: string): Promise<{invoiceI
     }
 
     const clientId = await getOrCreateClient(companyId, patient);
-    const paymentAccountId = getPaymentAccountId();
+    const paymentAccountId = await getPaymentAccountId();
     const exemptVatId = getExemptVatId();
 
     // Calcola la marca da bollo
@@ -406,6 +447,7 @@ export async function createAndSendInvoice(bookingId: string): Promise<{invoiceI
                 // Per fatture elettroniche, il pagamento = solo servizio (la marca da bollo è separata)
                 amount: service.price, // Solo il servizio, bollo in stamp_duty
                 due_date: new Date().toISOString().slice(0, 10),
+                paid_date: new Date().toISOString().slice(0, 10), // FONDAMENTALE: rende la fattura "saldata"
                 status: 'paid',
                 payment_account: { id: paymentAccountId }, // ID del conto di pagamento configurabile
             }
