@@ -51,7 +51,9 @@
       "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_i5PqfmEBnR2d@ep-polished-hill-agxsfgwn-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require\" npx tsx scripts/regenerate-invoices.ts)",
       "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_i5PqfmEBnR2d@ep-polished-hill-agxsfgwn-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require\" npx tsx scripts/update-invoices-with-cf.ts)",
       "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_i5PqfmEBnR2d@ep-polished-hill-agxsfgwn-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require\" npx tsx scripts/fix-missing-invoice.ts)",
-      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_i5PqfmEBnR2d@ep-polished-hill-agxsfgwn-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require\" npx tsx scripts/recreate-francesco-invoice.ts)"
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_i5PqfmEBnR2d@ep-polished-hill-agxsfgwn-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require\" npx tsx scripts/recreate-francesco-invoice.ts)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_i5PqfmEBnR2d@ep-polished-hill-agxsfgwn-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require\" npx tsx scripts/update-invoices-to-send.ts)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_i5PqfmEBnR2d@ep-polished-hill-agxsfgwn-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require\" npx tsx scripts/regenerate-all-invoices.ts)"
     ],
     "deny": [],
     "ask": []
