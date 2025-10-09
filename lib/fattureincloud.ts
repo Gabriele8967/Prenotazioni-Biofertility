@@ -382,6 +382,8 @@ export async function createAndSendInvoice(bookingId: string): Promise<{invoiceI
         show_totals: 'all',
         show_payments: true,
         show_notification_button: false,
+        // Fattura elettronica: true = stato "da inviare", false = stato "emessa"
+        e_invoice: true,
         // Marca da bollo (obbligatoria per fatture esenti IVA oltre €77,47)
         stamp_duty: stampDuty,
         items_list: [
