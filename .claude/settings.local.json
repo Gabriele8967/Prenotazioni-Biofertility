@@ -44,7 +44,10 @@
       "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_i5PqfmEBnR2d@ep-polished-hill-agxsfgwn-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require\" npx prisma migrate dev --name init)",
       "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_i5PqfmEBnR2d@ep-polished-hill-agxsfgwn-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require\" npx prisma db push)",
       "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_i5PqfmEBnR2d@ep-polished-hill-agxsfgwn-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require\" npx prisma db push --accept-data-loss)",
-      "Bash(git clone https://github.com/Gabriele8967/Fatture-pazienti.git)"
+      "Bash(git clone https://github.com/Gabriele8967/Fatture-pazienti.git)",
+      "Read(//home/gabriele/**)",
+      "Bash(cd:*)",
+      "Bash(npm audit:*)"
     ],
     "deny": [],
     "ask": []

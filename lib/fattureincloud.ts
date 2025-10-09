@@ -360,6 +360,7 @@ export async function createAndSendInvoice(bookingId: string): Promise<{invoiceI
     const entityData: any = {
       id: clientId,
       name: patient.name,
+      tax_code: patient.fiscalCode || '',
       // Includi l'indirizzo del paziente nella fattura
       address_street: patient.indirizzo || '',
       address_postal_code: patient.cap || '',
