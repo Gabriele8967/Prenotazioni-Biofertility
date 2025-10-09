@@ -403,9 +403,8 @@ export async function createAndSendInvoice(bookingId: string): Promise<{invoiceI
         ],
         payments_list: [
             {
-                // IMPORTANTE: Per fatture elettroniche (e_invoice: true), il pagamento NON deve includere la marca da bollo
-                // La marca da bollo viene gestita separatamente nel campo stamp_duty
-                amount: service.price, // Solo il prezzo del servizio, senza bollo
+                // Per fatture elettroniche, il pagamento = solo servizio (la marca da bollo è separata)
+                amount: service.price, // Solo il servizio, bollo in stamp_duty
                 due_date: new Date().toISOString().slice(0, 10),
                 status: 'paid',
                 payment_account: { id: paymentAccountId }, // ID del conto di pagamento configurabile
