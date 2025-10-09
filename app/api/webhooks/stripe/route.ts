@@ -51,13 +51,25 @@ export async function POST(request: NextRequest) {
       await sendBookingConfirmationToClient(bookingId);
 
       // 4. Crea e invia fattura
-      const { invoiceId } = await createAndSendInvoice(bookingId);
-      if (invoiceId) {
-        await db.booking.update({
-          where: { id: bookingId },
-          data: { fatturaId: invoiceId.toString() },
-        });
-        console.log(`✅ ID Fattura ${invoiceId} salvato per la prenotazione ${bookingId}.`);
+      try {
+        const { invoiceId } = await createAndSendInvoice(bookingId);
+        if (invoiceId) {
+          await db.booking.update({
+            where: { id: bookingId },
+            data: { fatturaId: invoiceId.toString() },
+          });
+          console.log(`✅ ID Fattura ${invoiceId} salvato per la prenotazione ${bookingId}.`);
+        } else {
+          console.error(`⚠️ ATTENZIONE: createAndSendInvoice ha restituito invoiceId null per booking ${bookingId}`);
+        }
+      } catch (invoiceError) {
+        console.error(`❌ ERRORE CRITICO: Impossibile creare fattura per booking ${bookingId}:`, invoiceError);
+        // Log dettagliato dell'errore per debugging
+        if (invoiceError instanceof Error) {
+          console.error(`Messaggio errore: ${invoiceError.message}`);
+          console.error(`Stack trace: ${invoiceError.stack}`);
+        }
+        // IMPORTANTE: anche se la fattura fallisce, continua con la pulizia dati
       }
 
     } catch (error) {

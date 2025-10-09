@@ -850,11 +850,33 @@ export default function BookingPage() {
                     </div>
 
                     {/* Riepilogo */}
-                    <div className="bg-blue-50 p-4 rounded-lg space-y-1">
-                      <p className="font-semibold">Riepilogo Prenotazione:</p>
-                      <p className="text-sm">{selectedService?.name}</p>
-                      <p className="text-sm">{selectedSlot.start.toLocaleDateString("it-IT")} alle {selectedSlot.start.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}</p>
-                      <p className="text-sm font-semibold text-lg">€{selectedService?.price}</p>
+                    <div className="bg-blue-50 p-4 rounded-lg space-y-2">
+                      <p className="font-semibold text-lg border-b border-blue-200 pb-2">Riepilogo Prenotazione</p>
+                      <p className="text-sm font-medium">{selectedService?.name}</p>
+                      <p className="text-sm text-gray-600">{selectedSlot.start.toLocaleDateString("it-IT")} alle {selectedSlot.start.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}</p>
+
+                      <div className="border-t border-blue-200 pt-2 mt-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Prezzo servizio:</span>
+                          <span className="font-medium">€{selectedService?.price.toFixed(2)}</span>
+                        </div>
+                        {selectedService && selectedService.price > 77.47 && (
+                          <div className="flex justify-between text-sm text-gray-600 mt-1">
+                            <span>Marca da bollo (art. 15 DPR 642/72):</span>
+                            <span className="font-medium">€2,00</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between text-lg font-bold mt-2 pt-2 border-t border-blue-300">
+                          <span>Totale da pagare:</span>
+                          <span className="text-blue-600">€{selectedService ? (selectedService.price + (selectedService.price > 77.47 ? 2 : 0)).toFixed(2) : '0.00'}</span>
+                        </div>
+                      </div>
+
+                      {selectedService && selectedService.price > 77.47 && (
+                        <p className="text-xs text-gray-500 bg-white p-2 rounded mt-2">
+                          ℹ️ La marca da bollo è obbligatoria per le prestazioni sanitarie esenti IVA con importo superiore a €77,47
+                        </p>
+                      )}
                     </div>
 
                     {/* Note aggiuntive */}

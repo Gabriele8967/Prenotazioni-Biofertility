@@ -15,6 +15,51 @@ function getCompanyId(): number {
 }
 
 /**
+ * Deduce il codice paese (country code) dal CAP o prefisso telefonico.
+ * Default: IT (Italia)
+ */
+function deduceCountryCode(cap?: string | null, phone?: string | null): string {
+  let country = 'IT'; // Default Italia
+  
+  // Verifica dal prefisso telefonico (più affidabile)
+  const phoneNum = phone?.trim() || '';
+  if (phoneNum.startsWith('+49')) {
+    return 'DE'; // Germania
+  } else if (phoneNum.startsWith('+39')) {
+    return 'IT'; // Italia
+  } else if (phoneNum.startsWith('+33')) {
+    return 'FR'; // Francia
+  } else if (phoneNum.startsWith('+34')) {
+    return 'ES'; // Spagna
+  } else if (phoneNum.startsWith('+41')) {
+    return 'CH'; // Svizzera
+  } else if (phoneNum.startsWith('+43')) {
+    return 'AT'; // Austria
+  } else if (phoneNum.startsWith('+44')) {
+    return 'GB'; // Regno Unito
+  } else if (phoneNum.startsWith('+32')) {
+    return 'BE'; // Belgio
+  } else if (phoneNum.startsWith('+31')) {
+    return 'NL'; // Paesi Bassi
+  }
+  
+  // Se non trovato dal telefono, prova dal CAP
+  const zipCode = cap?.trim() || '';
+  if (zipCode) {
+    // CAP tedesco (5 cifre, diverso range da quello italiano)
+    if (/^\d{5}$/.test(zipCode)) {
+      const zipNum = parseInt(zipCode);
+      // Range tipici CAP tedeschi vs italiani
+      if (zipNum < 10000) {
+        country = 'DE';
+      }
+    }
+  }
+  
+  return country;
+}
+
+/**
  * Recupera l'ID del conto di pagamento dalle variabili d'ambiente.
  * Se non configurato, usa il valore di default (1 = Conto Corrente).
  */
@@ -25,6 +70,43 @@ function getPaymentAccountId(): number {
     return 1; // Default: Conto Corrente
   }
   return parseInt(paymentAccountId, 10);
+}
+
+/**
+ * Recupera l'ID dell'aliquota IVA esente da usare per le prestazioni sanitarie.
+ * IMPORTANTE: Questo ID deve essere configurato su Fatture in Cloud come aliquota al 0%
+ * per prestazioni sanitarie esenti (art.10 DPR 633/72)
+ */
+function getExemptVatId(): number {
+  const exemptVatId = process.env.FATTUREINCLOUD_EXEMPT_VAT_ID;
+  if (!exemptVatId) {
+    console.warn('⚠️  FATTUREINCLOUD_EXEMPT_VAT_ID non configurato!');
+    console.warn('   Per trovare l\'ID corretto:');
+    console.warn('   1. Vai su Fatture in Cloud > Impostazioni > Aliquote IVA');
+    console.warn('   2. Cerca l\'aliquota 0% per prestazioni sanitarie esenti');
+    console.warn('   3. Annota l\'ID e configuralo in .env come FATTUREINCLOUD_EXEMPT_VAT_ID');
+    console.warn('   Usando temporaneamente ID 0 (potrebbe causare errori)');
+    return 0;
+  }
+  return parseInt(exemptVatId, 10);
+}
+
+/**
+ * Calcola se la marca da bollo è necessaria e restituisce l'importo.
+ * Secondo art. 15 DPR 642/72: marca da bollo €2,00 per fatture esenti IVA oltre €77,47
+ */
+export function calculateStampDuty(price: number): number {
+  const STAMP_DUTY_THRESHOLD = 77.47;
+  const STAMP_DUTY_AMOUNT = 2.00;
+
+  return price > STAMP_DUTY_THRESHOLD ? STAMP_DUTY_AMOUNT : 0;
+}
+
+/**
+ * Calcola il totale da pagare inclusa la marca da bollo se applicabile
+ */
+export function calculateTotalWithStampDuty(price: number): number {
+  return price + calculateStampDuty(price);
 }
 
 /**
@@ -174,7 +256,14 @@ async function getOrCreateClient(companyId: number, patient: any): Promise<numbe
   const [firstName, ...lastNameParts] = patient.name.split(' ');
   const lastName = lastNameParts.join(' ');
 
-  const createClientPayload = {
+  // Deduce il paese dal CAP o dal prefisso telefonico
+  const country = deduceCountryCode(patient.cap, patient.phone);
+  console.log(`[FATTURA_TRACE] 13. Paese dedotto per cliente: ${country} (CAP: ${patient.cap}, Tel: ${patient.phone})`);
+
+  // IMPORTANTE: Fatture in Cloud accetta solo 'Italia' come country, 
+  // quindi per clienti esteri usiamo comunque 'Italia' come paese fiscale
+  // ma mettiamo l'indirizzo estero completo
+  const createClientPayload: any = {
     data: {
       name: patient.name,
       first_name: firstName,
@@ -182,13 +271,20 @@ async function getOrCreateClient(companyId: number, patient: any): Promise<numbe
       email: patient.email,
       phone: patient.phone,
       tax_code: patient.fiscalCode,
-      country: 'IT',
       address_street: patient.indirizzo,
       address_postal_code: patient.cap,
       address_city: patient.citta,
     },
   };
 
+  // Aggiungi country solo se è Italia (IT)
+  // Per pazienti esteri, l'indirizzo estero è già nell'address_street/city/postal_code
+  if (country === 'IT') {
+    createClientPayload.data.country = 'Italia';
+  }
+
+  console.log(`[FATTURA_TRACE] 14. Payload creazione cliente:`, JSON.stringify(createClientPayload, null, 2));
+  
   try {
     const response = await axios.post(
       `${FIC_API_URL}/c/${companyId}/entities/clients`,
@@ -200,9 +296,13 @@ async function getOrCreateClient(companyId: number, patient: any): Promise<numbe
         }
       }
     );
+    console.log(`[FATTURA_TRACE] 15. Cliente creato con ID: ${response.data.data.id}`);
     return response.data.data.id;
   } catch (error: any) {
     console.error('Errore durante la creazione di un nuovo cliente:', error.response?.data || error.message);
+    if (error.response?.data?.error?.validation_result) {
+      console.error('Dettagli validazione:', JSON.stringify(error.response.data.error.validation_result, null, 2));
+    }
     throw new Error('Impossibile creare il cliente in Fatture in Cloud.');
   }
 }
@@ -243,38 +343,64 @@ export async function createAndSendInvoice(bookingId: string): Promise<{invoiceI
 
     const clientId = await getOrCreateClient(companyId, patient);
     const paymentAccountId = getPaymentAccountId();
+    const exemptVatId = getExemptVatId();
+
+    // Calcola la marca da bollo
+    const stampDuty = calculateStampDuty(service.price);
+    const totalWithStampDuty = calculateTotalWithStampDuty(service.price);
+
+    console.log(`[FATTURA_TRACE] 15. Prezzo servizio: €${service.price}`);
+    console.log(`[FATTURA_TRACE] 16. Marca da bollo: €${stampDuty}`);
+    console.log(`[FATTURA_TRACE] 17. Totale con marca da bollo: €${totalWithStampDuty}`);
 
     // Crea la fattura
-    const invoiceData = {
+    const patientCountry = deduceCountryCode(patient.cap, patient.phone);
+    console.log(`[FATTURA_TRACE] 18. Paese paziente per fattura: ${patientCountry}`);
+
+    const entityData: any = {
+      id: clientId,
+      name: patient.name,
+      // Includi l'indirizzo del paziente nella fattura
+      address_street: patient.indirizzo || '',
+      address_postal_code: patient.cap || '',
+      address_city: patient.citta || '',
+    };
+
+    // Aggiungi country solo se è Italia
+    if (patientCountry === 'IT') {
+      entityData.country = 'Italia';
+    }
+
+    const invoiceData: any = {
       data: {
         type: 'invoice',
-        entity: { 
-          id: clientId, 
-          name: patient.name,
-          // Includi l'indirizzo del paziente nella fattura
-          address_street: patient.indirizzo || '',
-          address_postal_code: patient.cap || '',
-          address_city: patient.citta || '',
-          country: 'IT'
-        },
+        entity: entityData,
         date: new Date().toISOString().slice(0, 10), // Data odierna
         language: { code: 'it' },
         currency: { id: 'EUR', exchange_rate: '1.00000', symbol: '€' },
         show_totals: 'all',
         show_payments: true,
         show_notification_button: false,
+        // Marca da bollo (obbligatoria per fatture esenti IVA oltre €77,47)
+        stamp_duty: stampDuty,
         items_list: [
           {
             name: service.name,
-            description: `Prestazione sanitaria esente IVA ai sensi dell'art. 10 DPR 633/72. Operatore: ${staff.name}. Imposta di bollo assolta in modo virtuale - autorizzazione dell'Ag. delle Entrate, Dir. Prov. II. di Roma Aut. n. 28/2025 del 29/5/2025 ai sensi art.15 del D.P.R. n° 642/72 e succ. modif. e integraz.`,
+            description: `Prestazione sanitaria esente IVA ai sensi dell'art. 10 DPR 633/72. Operatore: ${staff.name}.${stampDuty > 0 ? ' Imposta di bollo assolta in modo virtuale - autorizzazione dell\'Ag. delle Entrate, Dir. Prov. II. di Roma Aut. n. 28/2025 del 29/5/2025 ai sensi art.15 del D.P.R. n° 642/72 e succ. modif. e integraz.' : ''}`,
             qty: 1,
             net_price: service.price,
-            not_taxable: true,
+            // IMPORTANTE: usa l'ID IVA esente configurato (aliquota 0% per prestazioni sanitarie)
+            // Questo risolve il problema dell'importo €0,00 nell'elenco fatture
+            vat: {
+              id: exemptVatId, // ID dell'aliquota IVA esente (da configurare in .env)
+              value: 0,
+              description: 'Esente art.10'
+            }
           },
         ],
         payments_list: [
             {
-                amount: service.price,
+                amount: totalWithStampDuty,
                 due_date: new Date().toISOString().slice(0, 10),
                 status: 'paid',
                 payment_account: { id: paymentAccountId }, // ID del conto di pagamento configurabile
