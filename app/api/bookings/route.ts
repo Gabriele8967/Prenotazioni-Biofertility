@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { createGoogleCalendarEvent } from "@/lib/google-calendar";
+import { format } from "date-fns";
 import {
   checkBookingRateLimit,
   getClientIP,
@@ -164,9 +165,11 @@ export async function POST(request: NextRequest) {
             descriptionParts.push(``, `📝 NOTE`, sanitizedNotes);
         }
 
-        // Titolo evento: Nome Cognome - Tipo Visita (chiaramente visibile nel calendario)
-        const eventTitle = `${sanitizedData.name} - ${service.name}`;
-        
+        // Titolo evento con tutti i dati principali (come da formato centro medico)
+        // Formato: "Tipo Visita - online/in sede, email, nome, telefono\nOrario\nIndirizzo"
+        const timeRange = `${format(start, 'HH:mm')} - ${format(end, 'HH:mm')}`;
+        const eventTitle = `${service.name} - online, ${sanitizedData.email}, ${sanitizedData.name}, ${sanitizedData.phone || 'N/D'}\n${timeRange}\n${sanitizedData.indirizzo || 'N/D'}, ${sanitizedData.citta || 'N/D'} ${sanitizedData.provincia || ''} ${sanitizedData.cap || ''}`;
+
         const calendarEvent = await createGoogleCalendarEvent(
             eventTitle,
             descriptionParts.join('\n'),
