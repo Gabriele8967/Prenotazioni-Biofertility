@@ -64,8 +64,9 @@ function deduceCountryCode(cap?: string | null, phone?: string | null): string {
  * Cerca automaticamente un conto con "stripe", "carta" o "card" nel nome.
  * Se configurato FATTUREINCLOUD_PAYMENT_ACCOUNT_ID, usa quello.
  * Altrimenti cerca dinamicamente o usa il primo disponibile.
+ * Restituisce null se non è possibile trovare un conto valido.
  */
-async function getPaymentAccountId(): Promise<number> {
+async function getPaymentAccountId(): Promise<number | null> {
   const configuredId = process.env.FATTUREINCLOUD_PAYMENT_ACCOUNT_ID;
   if (configuredId) {
     return parseInt(configuredId, 10);
@@ -106,11 +107,11 @@ async function getPaymentAccountId(): Promise<number> {
       return selectedAccount.id;
     }
   } catch (error) {
-    console.error('❌ Errore recupero conti di pagamento, usando default:', error);
+    console.error('❌ Errore recupero conti di pagamento:', error);
   }
 
-  console.warn('FATTUREINCLOUD_PAYMENT_ACCOUNT_ID non configurato, usando ID di default (1)');
-  return 1; // Fallback
+  console.warn('⚠️ FATTUREINCLOUD_PAYMENT_ACCOUNT_ID non configurato e impossibile recuperare conti dinamicamente. Le fatture verranno create senza conto di pagamento specificato.');
+  return null; // Nessun conto trovato
 }
 
 /**
@@ -455,7 +456,11 @@ export async function createAndSendInvoice(bookingId: string): Promise<{invoiceI
                 due_date: new Date().toISOString().slice(0, 10),
                 paid_date: new Date().toISOString().slice(0, 10), // FONDAMENTALE: rende la fattura "saldata"
                 status: 'paid', // Fattura marcata come PAGATA (paziente paga con Stripe immediatamente)
-                payment_account: { id: paymentAccountId }, // ID del conto di pagamento (es. "Credit card / debit card")
+                payment_terms: {
+                  type: 'standard'
+                },
+                // Aggiungi payment_account solo se disponibile
+                ...(paymentAccountId ? { payment_account: { id: paymentAccountId } } : {}),
             }
         ],
         // Payment method obbligatorio per fatture elettroniche (sistema Tessera Sanitaria)
@@ -463,6 +468,9 @@ export async function createAndSendInvoice(bookingId: string): Promise<{invoiceI
           payment_method: 'MP08', // MP08 = Pagamento con carta di credito/debito (standard XML FatturaPA)
         },
         show_payment_method: true, // Mostra metodo di pagamento nella fattura
+        payment_method: {
+          name: 'Stripe'
+        },
       },
     };
 
