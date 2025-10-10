@@ -46,6 +46,7 @@ model User {
   professione            String?
   indirizzo              String?
   citta                  String?
+  provincia              String?                   // Provincia (es. RM, MI) - obbligatorio per fatturazione elettronica
   cap                    String?
   numeroDocumento        String?
   scadenzaDocumento      DateTime?

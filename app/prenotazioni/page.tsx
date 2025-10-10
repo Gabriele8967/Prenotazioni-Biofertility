@@ -95,6 +95,7 @@ export default function BookingPage() {
   const [professione, setProfessione] = useState("");
   const [indirizzo, setIndirizzo] = useState("");
   const [citta, setCitta] = useState("");
+  const [provincia, setProvincia] = useState("");
   const [cap, setCap] = useState("");
   const [codiceFiscale, setCodiceFiscale] = useState("");
   const [numeroDocumento, setNumeroDocumento] = useState("");
@@ -184,6 +185,7 @@ export default function BookingPage() {
           setProfessione(userData.professione || "");
           setIndirizzo(userData.indirizzo || "");
           setCitta(userData.citta || "");
+          setProvincia(userData.provincia || "");
           setCap(userData.cap || "");
           setCodiceFiscale(userData.fiscalCode || "");
           setNumeroDocumento(userData.numeroDocumento || "");
@@ -385,6 +387,7 @@ export default function BookingPage() {
           professione,
           indirizzo,
           citta,
+          provincia,
           cap,
           codiceFiscale,
           numeroDocumento,
@@ -757,6 +760,7 @@ export default function BookingPage() {
                       <div><Label>Codice Fiscale *</Label><Input value={codiceFiscale} onChange={(e) => setCodiceFiscale(e.target.value)} required /></div>
                       <div className="md:col-span-2"><Label>Indirizzo Completo *</Label><Input value={indirizzo} onChange={(e) => setIndirizzo(e.target.value)} required /></div>
                       <div><Label>Città *</Label><Input value={citta} onChange={(e) => setCitta(e.target.value)} required /></div>
+                      <div><Label>Provincia *</Label><Input value={provincia} onChange={(e) => setProvincia(e.target.value.toUpperCase())} maxLength={2} placeholder="RM" required /></div>
                       <div><Label>CAP *</Label><Input value={cap} onChange={(e) => setCap(e.target.value)} required /></div>
                       <div><Label>Numero Documento *</Label><Input value={numeroDocumento} onChange={(e) => setNumeroDocumento(e.target.value)} required /></div>
                       <div><Label>Scadenza Documento *</Label><Input type="date" value={scadenzaDocumento} onChange={(e) => setScadenzaDocumento(e.target.value)} required /></div>

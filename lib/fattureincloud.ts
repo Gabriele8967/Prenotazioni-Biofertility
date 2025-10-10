@@ -185,12 +185,13 @@ async function getOrCreateClient(companyId: number, patient: any): Promise<numbe
           existingClient.phone !== patient.phone ||
           existingClient.address_street !== patient.indirizzo ||
           existingClient.address_postal_code !== patient.cap ||
-          existingClient.address_city !== patient.citta
+          existingClient.address_city !== patient.citta ||
+          existingClient.address_province !== patient.provincia
         );
 
         if (needsUpdate) {
           console.log(`[FATTURA_TRACE] 9.1. Aggiornamento dati cliente trovato per email...`);
-          
+
           try {
             await axios.put(
               `${FIC_API_URL}/c/${companyId}/entities/clients/${clientId}`,
@@ -202,6 +203,7 @@ async function getOrCreateClient(companyId: number, patient: any): Promise<numbe
                   address_street: patient.indirizzo,
                   address_postal_code: patient.cap,
                   address_city: patient.citta,
+                  address_province: patient.provincia,
                 }
               },
               {
@@ -252,12 +254,13 @@ async function getOrCreateClient(companyId: number, patient: any): Promise<numbe
           existingClient.phone !== patient.phone ||
           existingClient.address_street !== patient.indirizzo ||
           existingClient.address_postal_code !== patient.cap ||
-          existingClient.address_city !== patient.citta
+          existingClient.address_city !== patient.citta ||
+          existingClient.address_province !== patient.provincia
         );
 
         if (needsUpdate) {
           console.log(`[FATTURA_TRACE] 11. Aggiornamento dati cliente su Fatture in Cloud...`);
-          
+
           try {
             await axios.put(
               `${FIC_API_URL}/c/${companyId}/entities/clients/${clientId}`,
@@ -269,6 +272,7 @@ async function getOrCreateClient(companyId: number, patient: any): Promise<numbe
                   address_street: patient.indirizzo,
                   address_postal_code: patient.cap,
                   address_city: patient.citta,
+                  address_province: patient.provincia,
                 }
               },
               {
@@ -315,6 +319,7 @@ async function getOrCreateClient(companyId: number, patient: any): Promise<numbe
       address_street: patient.indirizzo,
       address_postal_code: patient.cap,
       address_city: patient.citta,
+      address_province: patient.provincia,
     },
   };
 
@@ -406,6 +411,7 @@ export async function createAndSendInvoice(bookingId: string): Promise<{invoiceI
       address_street: patient.indirizzo || '',
       address_postal_code: patient.cap || '',
       address_city: patient.citta || '',
+      address_province: patient.provincia || '', // OBBLIGATORIO per fatturazione elettronica
     };
 
     // Aggiungi country solo se è Italia
@@ -448,15 +454,15 @@ export async function createAndSendInvoice(bookingId: string): Promise<{invoiceI
                 amount: service.price, // Solo il servizio, bollo in stamp_duty
                 due_date: new Date().toISOString().slice(0, 10),
                 paid_date: new Date().toISOString().slice(0, 10), // FONDAMENTALE: rende la fattura "saldata"
-                status: 'paid',
-                payment_account: { id: paymentAccountId }, // ID del conto di pagamento configurabile
+                status: 'paid', // Fattura marcata come PAGATA (paziente paga con Stripe immediatamente)
+                payment_account: { id: paymentAccountId }, // ID del conto di pagamento (es. "Credit card / debit card")
             }
         ],
-        // Payment method obbligatorio per fatture elettroniche
+        // Payment method obbligatorio per fatture elettroniche (sistema Tessera Sanitaria)
         ei_data: {
-          payment_method: 'MP08', // MP08 = Carta di pagamento (Stripe)
+          payment_method: 'MP08', // MP08 = Pagamento con carta di credito/debito (standard XML FatturaPA)
         },
-        show_payment_method: true,
+        show_payment_method: true, // Mostra metodo di pagamento nella fattura
       },
     };
 

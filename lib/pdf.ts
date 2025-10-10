@@ -70,7 +70,7 @@ export async function generatePrivacyPdf(bookingId: string): Promise<Uint8Array>
         'Data di Nascita': patient.birthDate ? new Date(patient.birthDate).toLocaleDateString('it-IT') : 'N/D',
         'Luogo di Nascita': patient.luogoNascita,
         'Professione': patient.professione,
-        'Indirizzo': `${patient.indirizzo}, ${patient.citta} ${patient.cap}`,
+        'Indirizzo': `${patient.indirizzo}, ${patient.citta} (${patient.provincia}) ${patient.cap}`,
         'Codice Fiscale': patient.fiscalCode,
         'Telefono': patient.phone,
         'Documento N.': patient.numeroDocumento,

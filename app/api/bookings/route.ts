@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log("✅ [BOOKING] Body parsato correttamente");
     const { serviceId, staffId, startTime, notes,
-      patientName, patientEmail, patientPhone, luogoNascita, dataNascita, professione, indirizzo, citta, cap, codiceFiscale, numeroDocumento, scadenzaDocumento, emailComunicazioni,
+      patientName, patientEmail, patientPhone, luogoNascita, dataNascita, professione, indirizzo, citta, provincia, cap, codiceFiscale, numeroDocumento, scadenzaDocumento, emailComunicazioni,
       partnerData,
       gdprConsent, privacyConsent,
       documentoFrente, documentoRetro, documentoFrentePartner, documentoRetroPartner
@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
         professione: professione ? sanitizeInput(professione) : null,
         indirizzo: indirizzo ? sanitizeInput(indirizzo) : null,
         citta: citta ? sanitizeInput(citta) : null,
+        provincia: provincia ? sanitizeInput(provincia.toUpperCase()) : null,
         cap: cap ? sanitizeInput(cap) : null,
         fiscalCode: codiceFiscale ? sanitizeInput(codiceFiscale.toUpperCase()) : null,
         numeroDocumento: numeroDocumento ? sanitizeInput(numeroDocumento) : null,
@@ -128,6 +129,7 @@ export async function POST(request: NextRequest) {
             `📍 INDIRIZZO`,
             `Via: ${sanitizedData.indirizzo || 'N/D'}`,
             `Città: ${sanitizedData.citta || 'N/D'}`,
+            `Provincia: ${sanitizedData.provincia || 'N/D'}`,
             `CAP: ${sanitizedData.cap || 'N/D'}`,
             ``,
             `📄 DOCUMENTO`,
