@@ -13,7 +13,7 @@ const COMPANY_ID = process.env.FATTUREINCLOUD_COMPANY_ID;
 let defaultPaymentAccountId: number | null = null;
 
 async function getDefaultPaymentAccount(): Promise<number> {
-  if (defaultPaymentAccountId) return defaultPaymentAccountId;
+  if (defaultPaymentAccountId !== null) return defaultPaymentAccountId;
 
   try {
     const response = await axios.get(
@@ -45,9 +45,14 @@ async function getDefaultPaymentAccount(): Promise<number> {
         selectedAccount = accounts[0];
       }
 
-      defaultPaymentAccountId = selectedAccount.id;
-      console.log(`\n✅ Conto di pagamento selezionato: ${selectedAccount.name} (ID: ${defaultPaymentAccountId})\n`);
-      return defaultPaymentAccountId;
+      if (!selectedAccount || !selectedAccount.id) {
+        throw new Error('Nessun conto di pagamento valido trovato');
+      }
+
+      const accountId = selectedAccount.id;
+      defaultPaymentAccountId = accountId;
+      console.log(`\n✅ Conto di pagamento selezionato: ${selectedAccount.name} (ID: ${accountId})\n`);
+      return accountId;
     }
 
     throw new Error('Nessun conto di pagamento disponibile');
