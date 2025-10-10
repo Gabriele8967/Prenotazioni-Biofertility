@@ -30,6 +30,7 @@ type Location = {
 type TimeSlot = { start: Date; end: Date; };
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FiscalCodeInput } from "@/components/FiscalCodeInput";
 
 // Helper per convertire file in base64
 const fileToBase64 = (file: File): Promise<string> => {
@@ -757,7 +758,14 @@ export default function BookingPage() {
                       <div><Label>Luogo di Nascita *</Label><Input value={luogoNascita} onChange={(e) => setLuogoNascita(e.target.value)} required /></div>
                       <div><Label>Data di Nascita *</Label><Input type="date" value={dataNascita} onChange={(e) => setDataNascita(e.target.value)} required /></div>
                       <div><Label>Professione</Label><Input value={professione} onChange={(e) => setProfessione(e.target.value)} /></div>
-                      <div><Label>Codice Fiscale *</Label><Input value={codiceFiscale} onChange={(e) => setCodiceFiscale(e.target.value)} required /></div>
+                      <div className="md:col-span-2">
+                        <FiscalCodeInput
+                          value={codiceFiscale}
+                          onChange={setCodiceFiscale}
+                          birthDate={dataNascita}
+                          required
+                        />
+                      </div>
                       <div className="md:col-span-2"><Label>Indirizzo Completo *</Label><Input value={indirizzo} onChange={(e) => setIndirizzo(e.target.value)} required /></div>
                       <div><Label>Città *</Label><Input value={citta} onChange={(e) => setCitta(e.target.value)} required /></div>
                       <div><Label>Provincia *</Label><Input value={provincia} onChange={(e) => setProvincia(e.target.value.toUpperCase())} maxLength={2} placeholder="RM" required /></div>
@@ -806,7 +814,15 @@ export default function BookingPage() {
                             <div><Label>Luogo Nascita Partner *</Label><Input value={luogoNascitaPartner} onChange={(e) => setLuogoNascitaPartner(e.target.value)} required={includePartner} /></div>
                             <div><Label>Data Nascita Partner *</Label><Input type="date" value={dataNascitaPartner} onChange={(e) => setDataNascitaPartner(e.target.value)} required={includePartner} /></div>
                             <div><Label>Professione Partner</Label><Input value={professionePartner} onChange={(e) => setProfessionePartner(e.target.value)} /></div>
-                            <div><Label>Codice Fiscale Partner *</Label><Input value={codiceFiscalePartner} onChange={(e) => setCodiceFiscalePartner(e.target.value)} required={includePartner} /></div>
+                            <div className="md:col-span-2">
+                              <FiscalCodeInput
+                                value={codiceFiscalePartner}
+                                onChange={setCodiceFiscalePartner}
+                                birthDate={dataNascitaPartner}
+                                required={includePartner}
+                                label="Codice Fiscale Partner"
+                              />
+                            </div>
                             <div><Label>Telefono Partner</Label><Input value={telefonoPartner} onChange={(e) => setTelefonoPartner(e.target.value)} /></div>
                             <div><Label>Email Partner</Label><Input type="email" value={emailPartner} onChange={(e) => setEmailPartner(e.target.value)} /></div>
                             <div><Label>Numero Documento Partner *</Label><Input value={numeroDocumentoPartner} onChange={(e) => setNumeroDocumentoPartner(e.target.value)} required={includePartner} /></div>

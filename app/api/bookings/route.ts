@@ -10,6 +10,7 @@ import {
   isValidItalianPhone,
   logSuspiciousActivity,
 } from "@/lib/security";
+import { validateFiscalCode, checkFiscalCodeCoherence, formatFiscalCode } from "@/lib/fiscal-code-validator";
 
 export async function POST(request: NextRequest) {
   try {
@@ -43,10 +44,35 @@ export async function POST(request: NextRequest) {
         citta: citta ? sanitizeInput(citta) : null,
         provincia: provincia ? sanitizeInput(provincia.toUpperCase()) : null,
         cap: cap ? sanitizeInput(cap) : null,
-        fiscalCode: codiceFiscale ? sanitizeInput(codiceFiscale.toUpperCase()) : null,
+        fiscalCode: codiceFiscale ? formatFiscalCode(sanitizeInput(codiceFiscale)) : null,
         numeroDocumento: numeroDocumento ? sanitizeInput(numeroDocumento) : null,
         emailComunicazioni: emailComunicazioni ? sanitizeInput(emailComunicazioni) : null,
     };
+
+    // Validazione Codice Fiscale
+    if (sanitizedData.fiscalCode) {
+        const fcValidation = validateFiscalCode(sanitizedData.fiscalCode);
+        if (!fcValidation.isValid) {
+            console.error("❌ [BOOKING] Codice fiscale non valido:", fcValidation.errors);
+            return NextResponse.json({
+                error: "Codice fiscale non valido",
+                details: fcValidation.errors
+            }, { status: 400 });
+        }
+
+        // Controlla coerenza con data di nascita se presente
+        if (dataNascita) {
+            const coherenceCheck = checkFiscalCodeCoherence(sanitizedData.fiscalCode, dataNascita);
+            if (!coherenceCheck.isCoherent) {
+                console.error("❌ [BOOKING] Codice fiscale non coerente con i dati anagrafici:", coherenceCheck.issues);
+                return NextResponse.json({
+                    error: "Il codice fiscale non corrisponde ai dati anagrafici inseriti",
+                    details: coherenceCheck.issues,
+                    suggestions: coherenceCheck.suggestions
+                }, { status: 400 });
+            }
+        }
+    }
 
     // Controlla se l'utente esiste già
     let existingPatient = await db.user.findUnique({ where: { email: sanitizedData.email } });
