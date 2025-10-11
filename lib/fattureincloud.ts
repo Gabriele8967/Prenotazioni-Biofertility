@@ -69,8 +69,12 @@ function deduceCountryCode(cap?: string | null, phone?: string | null): string {
 async function getPaymentAccountId(): Promise<number | null> {
   const configuredId = process.env.FATTUREINCLOUD_PAYMENT_ACCOUNT_ID;
   if (configuredId) {
-    return parseInt(configuredId, 10);
+    const parsedId = parseInt(configuredId, 10);
+    console.log(`✅ Payment Account ID configurato: ${parsedId}`);
+    return parsedId;
   }
+
+  console.warn('⚠️ FATTUREINCLOUD_PAYMENT_ACCOUNT_ID non configurato, cercando dinamicamente...');
 
   // Recupera la lista dei conti e cerca uno appropriato per Stripe
   const FIC_ACCESS_TOKEN = process.env.FATTUREINCLOUD_ACCESS_TOKEN;
@@ -390,6 +394,12 @@ export async function createAndSendInvoice(bookingId: string): Promise<{invoiceI
 
     const clientId = await getOrCreateClient(companyId, patient);
     const paymentAccountId = await getPaymentAccountId();
+
+    // Se non troviamo un payment account valido, blocca la creazione della fattura
+    if (!paymentAccountId) {
+      throw new Error('❌ FATTUREINCLOUD_PAYMENT_ACCOUNT_ID non configurato. Impossibile creare fattura con pagamenti.');
+    }
+
     const exemptVatId = getExemptVatId();
 
     // Calcola la marca da bollo
@@ -459,8 +469,7 @@ export async function createAndSendInvoice(bookingId: string): Promise<{invoiceI
                 payment_terms: {
                   type: 'standard'
                 },
-                // Aggiungi payment_account solo se disponibile
-                ...(paymentAccountId ? { payment_account: { id: paymentAccountId } } : {}),
+                payment_account: { id: paymentAccountId }
             }
         ],
         // Payment method obbligatorio per fatture elettroniche (sistema Tessera Sanitaria)
