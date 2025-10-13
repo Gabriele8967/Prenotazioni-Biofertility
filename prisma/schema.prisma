@@ -63,6 +63,8 @@ model User {
   services            Service[]  @relation("StaffServices")
   auditLogs           AuditLog[]
 
+  @@index([fiscalCode])
+  @@index([role])
   @@map("users")
 }
 
@@ -83,6 +85,8 @@ model Service {
   staffMembers    User[]    @relation("StaffServices")
   bookings        Booking[]
 
+  @@index([name])
+  @@index([category])
   @@map("services")
 }
 

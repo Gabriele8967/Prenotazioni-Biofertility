@@ -40,3 +40,6 @@ next-env.d.ts
 prisma/migrations
 VERCEL_ENV.md
 temp_privacy_module/
+
+# Sentry Config File
+.env.sentry-build-plugin

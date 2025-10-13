@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 
 // Tipi di errori dell'applicazione
 export enum ErrorType {
@@ -75,10 +76,19 @@ class ErrorLogger {
       console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
     }
 
-    // In produzione, invia a servizio di monitoring (es. Sentry, LogRocket)
-    if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
-      // TODO: Integrare con Sentry
-      // Sentry.captureException(error, { contexts: { custom: logEntry } });
+    // Invia a Sentry in produzione
+    if (process.env.NODE_ENV === 'production') {
+      Sentry.captureException(error, {
+        level: isAppError && error.isOperational ? 'error' : 'fatal',
+        tags: {
+          errorType: logEntry.type,
+          context: logEntry.context || 'unknown',
+        },
+        extra: {
+          details: logEntry.details,
+          isOperational: logEntry.isOperational,
+        },
+      });
     }
   }
 
