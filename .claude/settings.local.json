@@ -5,7 +5,9 @@
       "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_i5PqfmEBnR2d@ep-polished-hill-agxsfgwn-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require\" npx prisma generate)",
       "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_i5PqfmEBnR2d@ep-polished-hill-agxsfgwn-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require\" npx tsx tests/booking-flow-test.ts)",
       "Bash(export:*)",
-      "Bash(vercel logs:*)"
+      "Bash(vercel logs:*)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_i5PqfmEBnR2d@ep-polished-hill-agxsfgwn-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require\" npx tsx scripts/check-patients.ts)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_i5PqfmEBnR2d@ep-polished-hill-agxsfgwn-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require\" npx tsx scripts/test-booking-simulation.ts)"
     ],
     "deny": [],
     "ask": []

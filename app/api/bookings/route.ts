@@ -16,16 +16,23 @@ import { validatePatientData } from "@/lib/validators";
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("📥 [BOOKING] Nuova richiesta di prenotazione ricevuta");
+    const timestamp = new Date().toISOString();
+    console.log(`\n${"=".repeat(80)}`);
+    console.log(`📥 [BOOKING ${timestamp}] Nuova richiesta di prenotazione`);
+    console.log("=".repeat(80));
 
     const clientIP = getClientIP(request.headers);
+    console.log(`🌐 [BOOKING] IP Client: ${clientIP}`);
+
     if (!checkBookingRateLimit(clientIP)) {
       console.error("❌ [BOOKING] Rate limit superato per IP:", clientIP);
       return NextResponse.json({ error: "Troppe richieste. Riprova più tardi." }, { status: 429 });
     }
+    console.log("✅ [BOOKING] Rate limit OK");
 
     const body = await request.json();
     console.log("✅ [BOOKING] Body parsato correttamente");
+    console.log(`📧 [BOOKING] Email paziente: ${body.patientEmail}`);
     const { serviceId, staffId, startTime, notes,
       patientName, patientEmail, patientPhone, luogoNascita, dataNascita, professione, indirizzo, citta, provincia, cap, codiceFiscale, numeroDocumento, scadenzaDocumento, emailComunicazioni,
       partnerData,
@@ -34,6 +41,8 @@ export async function POST(request: NextRequest) {
     } = body;
 
     const sanitizedNotes = notes ? sanitizeInput(notes) : null;
+
+    console.log("🔄 [BOOKING] Sanitizzazione dati in corso...");
 
     // Sanitizza i dati prima di usarli
     const sanitizedData = {
@@ -44,43 +53,52 @@ export async function POST(request: NextRequest) {
         professione: professione ? sanitizeInput(professione) : null,
         indirizzo: indirizzo ? sanitizeInput(indirizzo) : null,
         citta: citta ? sanitizeInput(citta) : null,
-        provincia: provincia ? sanitizeInput(provincia.toUpperCase()) : null,
+        provincia: provincia ? sanitizeInput(provincia).toUpperCase() : null,
         cap: cap ? sanitizeInput(cap) : null,
         fiscalCode: codiceFiscale ? formatFiscalCode(sanitizeInput(codiceFiscale)) : null,
         numeroDocumento: numeroDocumento ? sanitizeInput(numeroDocumento) : null,
         emailComunicazioni: emailComunicazioni ? sanitizeInput(emailComunicazioni) : null,
     };
 
+    console.log("✅ [BOOKING] Dati sanitizzati");
+
     // Validazione Codice Fiscale
+    console.log("🔍 [BOOKING] Validazione codice fiscale...");
     if (sanitizedData.fiscalCode) {
         const fcValidation = validateFiscalCode(sanitizedData.fiscalCode);
         if (!fcValidation.isValid) {
-            console.error("❌ [BOOKING] Codice fiscale non valido:", fcValidation.errors);
+            console.error("❌ [BOOKING] Codice fiscale non valido:", sanitizedData.fiscalCode, "Errori:", fcValidation.errors);
             return NextResponse.json({
                 error: "Codice fiscale non valido",
                 details: fcValidation.errors
             }, { status: 400 });
         }
+        console.log("✅ [BOOKING] Codice fiscale formato valido");
 
         // Controlla coerenza con data di nascita se presente
         if (dataNascita) {
+            console.log(`🔍 [BOOKING] Verifica coerenza CF con data nascita: ${dataNascita}`);
             const coherenceCheck = checkFiscalCodeCoherence(sanitizedData.fiscalCode, dataNascita);
             if (!coherenceCheck.isCoherent) {
-                console.error("❌ [BOOKING] Codice fiscale non coerente con i dati anagrafici:", coherenceCheck.issues);
+                console.error("❌ [BOOKING] CF non coerente:", coherenceCheck.issues);
                 return NextResponse.json({
                     error: "Il codice fiscale non corrisponde ai dati anagrafici inseriti",
                     details: coherenceCheck.issues,
                     suggestions: coherenceCheck.suggestions
                 }, { status: 400 });
             }
+            console.log("✅ [BOOKING] CF coerente con data nascita");
         }
     }
 
     // Controlla se l'utente esiste già
+    console.log("🔍 [BOOKING] Verifica utente esistente...");
     let existingPatient = await db.user.findUnique({ where: { email: sanitizedData.email } });
     const isReturningUser = !!existingPatient;
+    console.log(`${isReturningUser ? '🔄' : '🆕'} [BOOKING] Utente ${isReturningUser ? 'esistente' : 'nuovo'}`);
 
     // Validazione dati obbligatori completa
+    console.log("🔍 [BOOKING] Validazione campi obbligatori...");
     const missingFields: string[] = [];
     if (!serviceId) missingFields.push('Servizio');
     if (!staffId) missingFields.push('Operatore');
@@ -106,18 +124,30 @@ export async function POST(request: NextRequest) {
         missingFields
       }, { status: 400 });
     }
+    console.log("✅ [BOOKING] Tutti i campi obbligatori presenti");
 
     // Richiedi documenti solo per i nuovi utenti
+    console.log("🔍 [BOOKING] Verifica documenti...");
     if (!isReturningUser && (!documentoFrente || !documentoRetro)) {
         console.error("❌ [BOOKING] Documenti mancanti per nuovo utente:", sanitizedData.email);
         return NextResponse.json({ error: "Documenti di identità mancanti per il nuovo utente." }, { status: 400 });
     }
+    console.log(`✅ [BOOKING] Documenti OK ${!isReturningUser ? '(nuovi documenti caricati)' : '(utente esistente)'}`);
 
+    console.log("🔍 [BOOKING] Recupero servizio e staff dal database...");
     const service = await db.service.findUnique({ where: { id: serviceId } });
-    if (!service) return NextResponse.json({ error: "Servizio non trovato" }, { status: 404 });
+    if (!service) {
+        console.error("❌ [BOOKING] Servizio non trovato:", serviceId);
+        return NextResponse.json({ error: "Servizio non trovato" }, { status: 404 });
+    }
+    console.log(`✅ [BOOKING] Servizio trovato: ${service.name} (€${service.price})`);
 
-    const staff = await db.user.findUnique({ where: { id: staffId }, select: { email: true } });
-    if (!staff) return NextResponse.json({ error: "Staff non trovato" }, { status: 404 });
+    const staff = await db.user.findUnique({ where: { id: staffId }, select: { email: true, name: true } });
+    if (!staff) {
+        console.error("❌ [BOOKING] Staff non trovato:", staffId);
+        return NextResponse.json({ error: "Staff non trovato" }, { status: 404 });
+    }
+    console.log(`✅ [BOOKING] Staff trovato: ${staff.name}`);
 
     const start = new Date(startTime);
     const end = new Date(start.getTime() + service.durationMinutes * 60000);
@@ -135,34 +165,44 @@ export async function POST(request: NextRequest) {
         dataProcessingConsent: privacyConsent,
     };
 
-    console.log(`[BOOKING_TRACE] 1. Email ricevuta dal form: ${sanitizedData.email}`);
+    console.log("🔄 [BOOKING] Creazione/aggiornamento utente paziente...");
 
     let patient = await db.user.findUnique({ where: { email: sanitizedData.email } });
 
     if (patient) {
-      console.log(`[BOOKING_TRACE] 2. Trovato utente esistente con ID: ${patient.id} e email: ${patient.email} e ruolo: ${patient.role}`);
-      
+      console.log(`🔄 [BOOKING] Utente esistente (ID: ${patient.id}, Ruolo: ${patient.role})`);
+
       // IMPORTANTE: Non permettere di sovrascrivere utenti ADMIN o STAFF
       if (patient.role === 'ADMIN' || patient.role === 'STAFF') {
-        console.error(`[BOOKING_TRACE] ERRORE: Tentativo di sovrascrivere un utente ${patient.role} con email ${patient.email}`);
-        return NextResponse.json({ 
-          error: "Questa email è già associata a un account amministrativo. Usa un'altra email per la prenotazione." 
+        console.error(`❌ [BOOKING] ERRORE: Tentativo di sovrascrivere utente ${patient.role}`);
+        return NextResponse.json({
+          error: "Questa email è già associata a un account amministrativo. Usa un'altra email per la prenotazione."
         }, { status: 400 });
       }
-      
-      patient = await db.user.update({ where: { id: patient.id }, data: userPayload });
-      console.log(`[BOOKING_TRACE] 3. Utente aggiornato. Email attuale: ${patient.email}`);
+
+      try {
+        patient = await db.user.update({ where: { id: patient.id }, data: userPayload });
+        console.log(`✅ [BOOKING] Utente aggiornato con successo (ID: ${patient.id})`);
+      } catch (dbError) {
+        console.error("❌ [BOOKING] Errore durante aggiornamento utente:", dbError);
+        throw dbError;
+      }
     } else {
+      console.log("🆕 [BOOKING] Creazione nuovo paziente...");
       const tempPassword = await require("bcryptjs").hash(Math.random().toString(36), 10);
-      console.log(`[BOOKING_TRACE] 2. Nessun utente esistente. Creazione nuovo utente con email: ${userPayload.email}`);
-      patient = await db.user.create({
-        data: { ...userPayload, password: tempPassword, role: "PATIENT" },
-      });
-      console.log(`[BOOKING_TRACE] 3. Creato nuovo utente con ID: ${patient.id} e email: ${patient.email}`);
+
+      try {
+        patient = await db.user.create({
+          data: { ...userPayload, password: tempPassword, role: "PATIENT" },
+        });
+        console.log(`✅ [BOOKING] Nuovo paziente creato (ID: ${patient.id})`);
+      } catch (dbError) {
+        console.error("❌ [BOOKING] Errore durante creazione paziente:", dbError);
+        throw dbError;
+      }
     }
 
-    console.log(`[BOOKING_TRACE] 4. ID paziente da associare alla prenotazione: ${patient.id}`);
-
+    console.log("📅 [BOOKING] Creazione evento Google Calendar...");
     let googleEventId: string | undefined = undefined;
     try {
         // Costruisci una descrizione completa con tutti i dati del form
@@ -225,23 +265,40 @@ export async function POST(request: NextRequest) {
             start, end, staff.email, sanitizedData.email
         );
         googleEventId = calendarEvent.id || undefined;
+        console.log(`✅ [BOOKING] Evento Google Calendar creato: ${googleEventId}`);
     } catch (calendarError) {
-        console.error("⚠️ Errore non bloccante nella creazione dell'evento Google Calendar:", calendarError);
+        console.error("⚠️  [BOOKING] Errore Google Calendar (non bloccante):", calendarError);
         // Non bloccare il flusso se la creazione dell'evento fallisce
     }
 
-    const booking = await db.booking.create({
-      data: {
-        serviceId, staffId, patientId: patient.id, startTime: start, endTime: end, notes: sanitizedNotes,
-        googleEventId: googleEventId,
-        status: "PENDING",
-        partnerData: partnerData as string | undefined,
-        documentoFrente,
-        documentoRetro,
-        documentoFrentePartner,
-        documentoRetroPartner,
-      },
-    });
+    console.log("💾 [BOOKING] Salvataggio prenotazione nel database...");
+    let booking;
+    try {
+      booking = await db.booking.create({
+        data: {
+          serviceId, staffId, patientId: patient.id, startTime: start, endTime: end, notes: sanitizedNotes,
+          googleEventId: googleEventId,
+          status: "PENDING",
+          partnerData: partnerData as string | undefined,
+          documentoFrente,
+          documentoRetro,
+          documentoFrentePartner,
+          documentoRetroPartner,
+        },
+      });
+      console.log(`✅ [BOOKING] Prenotazione salvata (ID: ${booking.id})`);
+    } catch (dbError) {
+      console.error("❌ [BOOKING] ERRORE CRITICO durante creazione prenotazione:", dbError);
+      throw dbError;
+    }
+
+    console.log("=".repeat(80));
+    console.log(`✅ [BOOKING] Prenotazione completata con successo!`);
+    console.log(`   Paziente: ${patient.name} (${patient.email})`);
+    console.log(`   Servizio: ${service.name}`);
+    console.log(`   Data: ${start.toLocaleString('it-IT')}`);
+    console.log(`   Booking ID: ${booking.id}`);
+    console.log("=".repeat(80) + "\n");
 
     return NextResponse.json(booking);
 
