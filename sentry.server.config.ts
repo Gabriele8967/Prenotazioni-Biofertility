@@ -26,7 +26,7 @@ Sentry.init({
       delete event.request.cookies;
 
       // Maschera parametri sensibili
-      if (event.request.data) {
+      if (event.request.data && typeof event.request.data === 'object') {
         const sensitiveFields = [
           'password',
           'token',
@@ -39,20 +39,22 @@ Sentry.init({
           'ipAddress',
         ];
 
+        const data = event.request.data as Record<string, any>;
         sensitiveFields.forEach(field => {
-          if (event.request?.data && field in event.request.data) {
-            event.request.data[field] = '[FILTERED]';
+          if (field in data) {
+            data[field] = '[FILTERED]';
           }
         });
       }
     }
 
     // Maschera dati personali negli extra
-    if (event.extra) {
+    if (event.extra && typeof event.extra === 'object') {
       const sensitiveKeys = ['fiscalCode', 'phone', 'email', 'indirizzo'];
+      const extra = event.extra as Record<string, any>;
       sensitiveKeys.forEach(key => {
-        if (event.extra && key in event.extra) {
-          event.extra[key] = '[FILTERED]';
+        if (key in extra) {
+          extra[key] = '[FILTERED]';
         }
       });
     }
