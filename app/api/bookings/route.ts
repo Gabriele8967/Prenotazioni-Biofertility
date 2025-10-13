@@ -15,6 +15,18 @@ import { handleApiError, AppError, ErrorType, logger, handleDatabaseError } from
 import { validatePatientData } from "@/lib/validators";
 
 export async function POST(request: NextRequest) {
+  // Limite dimensione payload (4.4MB per sicurezza sotto il limite di 4.5MB di Vercel)
+  const MAX_PAYLOAD_SIZE = 4.4 * 1024 * 1024;
+  const contentLength = request.headers.get('content-length');
+
+  if (contentLength && parseInt(contentLength, 10) > MAX_PAYLOAD_SIZE) {
+    console.error(`❌ [BOOKING] Payload troppo grande: ${contentLength} bytes`);
+    return NextResponse.json(
+      { error: `Richiesta troppo grande. La dimensione totale non può superare i 4.4MB. Prova a usare immagini più piccole.` },
+      { status: 413 } // 413 Payload Too Large
+    );
+  }
+
   try {
     const timestamp = new Date().toISOString();
     console.log(`\n${"=".repeat(80)}`);

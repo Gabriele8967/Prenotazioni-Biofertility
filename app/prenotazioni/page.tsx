@@ -126,8 +126,8 @@ export default function BookingPage() {
   const [documentoRetroPartner, setDocumentoRetroPartner] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string>("");
 
-  // Dimensione massima file: 5MB
-  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
+  // Dimensione massima file: 2MB per evitare crash serverless (limite Vercel 4.5MB)
+  const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB in bytes
 
   // Funzione per validare dimensione file
   const validateFileSize = (file: File | null, fieldName: string): boolean => {
@@ -135,7 +135,7 @@ export default function BookingPage() {
 
     if (file.size > MAX_FILE_SIZE) {
       const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
-      setFileError(`❌ ${fieldName}: Il file è troppo grande (${sizeMB}MB). Dimensione massima consentita: 5MB`);
+      setFileError(`❌ ${fieldName}: Il file è troppo grande (${sizeMB}MB). Dimensione massima consentita: 2MB`);
       return false;
     }
 
@@ -453,9 +453,14 @@ export default function BookingPage() {
         }),
       });
 
-      const booking = await res.json();
-
       if (res.ok) {
+        try {
+          booking = await res.json();
+        } catch (parseError) {
+          console.error("❌ Errore parsing JSON:", parseError);
+          throw new Error("Errore nel processare la risposta del server. Riprova o contatta l'assistenza.");
+        }
+
         // Crea sessione Stripe per il pagamento
         const checkoutRes = await fetch("/api/checkout-sessions", {
           method: "POST",
@@ -473,21 +478,22 @@ export default function BookingPage() {
           alert("Errore nella creazione della sessione di pagamento: " + (checkoutData.error || 'Errore sconosciuto'));
         }
       } else {
-        console.error("❌ Errore prenotazione:", booking);
-
-        // Mostra errore dettagliato
-        let errorMessage = "Errore nella prenotazione:\n\n";
-        if (booking.error) {
-          errorMessage += booking.error;
+        // Se la risposta non è ok, prova a leggere il JSON per un errore strutturato
+        try {
+          const errorData = await res.json();
+          console.error("❌ Errore prenotazione (server):", errorData);
+          // Mostra errore dettagliato dal server
+          let errorMessage = "Errore nella prenotazione:\n\n";
+          if (errorData.error) errorMessage += errorData.error;
+          if (errorData.missingFields) errorMessage += `\nCampi mancanti: ${errorData.missingFields.join(', ')}`;
+          if (errorData.details) errorMessage += `\nDettagli: ${Array.isArray(errorData.details) ? errorData.details.join(', ') : errorData.details}`;
+          alert(errorMessage);
+        } catch (e) {
+          // Se il JSON non può essere parsato, mostra un errore generico
+          const errorText = await res.text();
+          console.error("❌ Errore server (risposta non-JSON):", errorText.substring(0, 500));
+          alert(`Si è verificato un errore sul server (codice: ${res.status}). Questo può accadere se i file caricati sono troppo grandi. Riprova con file più piccoli o contatta l'assistenza.`);
         }
-        if (booking.missingFields && booking.missingFields.length > 0) {
-          errorMessage += "\n\nCampi mancanti: " + booking.missingFields.join(', ');
-        }
-        if (booking.details) {
-          errorMessage += "\n\nDettagli: " + (Array.isArray(booking.details) ? booking.details.join(', ') : booking.details);
-        }
-
-        alert(errorMessage);
       }
     } catch (error) {
       console.error("❌ Errore critico durante prenotazione:", error);
