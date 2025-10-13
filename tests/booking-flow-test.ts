@@ -465,7 +465,7 @@ await runTest('Validazione multipla in parallelo', async () => {
 logSection('REPORT FINALE');
 
 const passed = results.filter(r => r.passed).length;
-const failed = results.filter(r => r.failed).length;
+const failed = results.filter(r => !r.passed).length;
 const total = results.length;
 const successRate = ((passed / total) * 100).toFixed(1);
 
