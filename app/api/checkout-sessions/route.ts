@@ -4,13 +4,19 @@ import { db } from '@/lib/db';
 import { calculateStampDuty } from '@/lib/fattureincloud';
 
 // Inizializza Stripe con la chiave segreta
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-09-30.clover',
-  typescript: true,
-});
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2025-09-30.clover',
+      typescript: true,
+    })
+  : null;
 
 export async function POST(request: NextRequest) {
   try {
+    if (!stripe) {
+      return NextResponse.json({ error: 'Stripe non configurato' }, { status: 500 });
+    }
+
     const { bookingId } = await request.json();
 
     if (!bookingId) {

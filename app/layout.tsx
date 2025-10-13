@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import CookieBanner from "@/components/CookieBanner";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,7 +19,9 @@ export default function RootLayout({
   return (
     <html lang="it">
       <body className={inter.className}>
-        {children}
+        <ErrorBoundary>
+          {children}
+        </ErrorBoundary>
         <CookieBanner />
       </body>
     </html>

@@ -11,6 +11,8 @@ import {
   logSuspiciousActivity,
 } from "@/lib/security";
 import { validateFiscalCode, checkFiscalCodeCoherence, formatFiscalCode } from "@/lib/fiscal-code-validator";
+import { handleApiError, AppError, ErrorType, logger, handleDatabaseError } from "@/lib/error-handler";
+import { validatePatientData } from "@/lib/validators";
 
 export async function POST(request: NextRequest) {
   try {
@@ -223,15 +225,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(booking);
 
   } catch (error) {
-    console.error("❌ [BOOKING] Errore critico durante la creazione della prenotazione:", error);
-    if (error instanceof Error) {
-      console.error("❌ [BOOKING] Messaggio errore:", error.message);
-      console.error("❌ [BOOKING] Stack trace:", error.stack);
-    }
-    return NextResponse.json({
-      error: "Errore imprevisto durante la creazione della prenotazione.",
-      details: error instanceof Error ? error.message : 'Errore sconosciuto'
-    }, { status: 500 });
+    return handleApiError(
+      error,
+      'POST /api/bookings',
+      'Errore durante la creazione della prenotazione. Riprova tra qualche istante.'
+    );
   }
 }
 
@@ -278,10 +276,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(bookings);
   } catch (error) {
-    console.error("Error fetching bookings:", error);
-    return NextResponse.json(
-      { error: "Errore nel recupero delle prenotazioni" },
-      { status: 500 }
+    return handleApiError(
+      error,
+      'GET /api/bookings',
+      'Errore nel recupero delle prenotazioni'
     );
   }
 }

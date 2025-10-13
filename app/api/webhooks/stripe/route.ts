@@ -5,13 +5,19 @@ import { headers } from 'next/headers';
 import { createAndSendInvoice } from '@/lib/fattureincloud';
 import { sendBookingConfirmationToAdmin, sendBookingConfirmationToClient } from '@/lib/email';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-09-30.clover',
-});
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2025-09-30.clover',
+    })
+  : null;
 
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
 
 export async function POST(request: NextRequest) {
+  if (!stripe) {
+    return NextResponse.json({ error: 'Stripe non configurato' }, { status: 500 });
+  }
+
   const body = await request.text();
   const headersList = await headers();
   const signature = headersList.get('stripe-signature')!;

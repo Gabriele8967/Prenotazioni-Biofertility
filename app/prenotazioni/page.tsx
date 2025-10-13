@@ -124,6 +124,52 @@ export default function BookingPage() {
   const [documentoRetro, setDocumentoRetro] = useState<File | null>(null);
   const [documentoFrentePartner, setDocumentoFrentePartner] = useState<File | null>(null);
   const [documentoRetroPartner, setDocumentoRetroPartner] = useState<File | null>(null);
+  const [fileError, setFileError] = useState<string>("");
+
+  // Dimensione massima file: 5MB
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
+
+  // Funzione per validare dimensione file
+  const validateFileSize = (file: File | null, fieldName: string): boolean => {
+    if (!file) return true; // Se non c'è file, ok
+
+    if (file.size > MAX_FILE_SIZE) {
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      setFileError(`❌ ${fieldName}: Il file è troppo grande (${sizeMB}MB). Dimensione massima consentita: 5MB`);
+      return false;
+    }
+
+    setFileError(""); // Reset errore se tutto ok
+    return true;
+  };
+
+  // Handler per documento fronte paziente
+  const handleDocumentoFronte = (file: File | null) => {
+    if (validateFileSize(file, "Documento Fronte")) {
+      setDocumentoFrente(file);
+    }
+  };
+
+  // Handler per documento retro paziente
+  const handleDocumentoRetro = (file: File | null) => {
+    if (validateFileSize(file, "Documento Retro")) {
+      setDocumentoRetro(file);
+    }
+  };
+
+  // Handler per documento fronte partner
+  const handleDocumentoFrentePartner = (file: File | null) => {
+    if (validateFileSize(file, "Documento Fronte Partner")) {
+      setDocumentoFrentePartner(file);
+    }
+  };
+
+  // Handler per documento retro partner
+  const handleDocumentoRetroPartner = (file: File | null) => {
+    if (validateFileSize(file, "Documento Retro Partner")) {
+      setDocumentoRetroPartner(file);
+    }
+  };
 
   // Consensi
   const [gdprConsent, setGdprConsent] = useState(false);
@@ -757,7 +803,7 @@ export default function BookingPage() {
                       <div><Label>Telefono *</Label><Input type="tel" value={patientPhone} onChange={(e) => setPatientPhone(e.target.value)} required /></div>
                       <div><Label>Luogo di Nascita *</Label><Input value={luogoNascita} onChange={(e) => setLuogoNascita(e.target.value)} required /></div>
                       <div><Label>Data di Nascita *</Label><Input type="date" value={dataNascita} onChange={(e) => setDataNascita(e.target.value)} required /></div>
-                      <div><Label>Professione</Label><Input value={professione} onChange={(e) => setProfessione(e.target.value)} /></div>
+                      <div><Label>Professione *</Label><Input value={professione} onChange={(e) => setProfessione(e.target.value)} required /></div>
                       <div className="md:col-span-2">
                         <FiscalCodeInput
                           value={codiceFiscale}
@@ -779,20 +825,49 @@ export default function BookingPage() {
                     {!isReturningUser && (
                       <div className="border-t pt-6">
                         <h3 className="font-semibold mb-4">📄 Documenti di Identità *</h3>
+
+                        {fileError && (
+                          <div className="mb-4 p-3 bg-red-50 border border-red-300 rounded-md text-sm text-red-800">
+                            {fileError}
+                          </div>
+                        )}
+
                         <div className="grid md:grid-cols-2 gap-4">
                           <div>
-                            <Label htmlFor="docFrente">Documento Fronte *</Label>
+                            <Label htmlFor="docFrente">Documento Fronte * (max 5MB)</Label>
                             <div className="mt-2 flex items-center gap-2">
-                              <Input id="docFrente" type="file" accept="image/*" onChange={(e) => setDocumentoFrente(e.target.files?.[0] || null)} required={!isReturningUser} />
+                              <Input
+                                id="docFrente"
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleDocumentoFronte(e.target.files?.[0] || null)}
+                                required={!isReturningUser}
+                              />
                               {documentoFrente && <CheckCircle2 className="w-5 h-5 text-green-600" />}
                             </div>
+                            {documentoFrente && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                {(documentoFrente.size / (1024 * 1024)).toFixed(2)} MB
+                              </p>
+                            )}
                           </div>
                           <div>
-                            <Label htmlFor="docRetro">Documento Retro *</Label>
+                            <Label htmlFor="docRetro">Documento Retro * (max 5MB)</Label>
                             <div className="mt-2 flex items-center gap-2">
-                              <Input id="docRetro" type="file" accept="image/*" onChange={(e) => setDocumentoRetro(e.target.files?.[0] || null)} required={!isReturningUser} />
+                              <Input
+                                id="docRetro"
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleDocumentoRetro(e.target.files?.[0] || null)}
+                                required={!isReturningUser}
+                              />
                               {documentoRetro && <CheckCircle2 className="w-5 h-5 text-green-600" />}
                             </div>
+                            {documentoRetro && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                {(documentoRetro.size / (1024 * 1024)).toFixed(2)} MB
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -813,7 +888,7 @@ export default function BookingPage() {
                             <div><Label>Cognome Partner *</Label><Input value={cognomePartner} onChange={(e) => setCognomePartner(e.target.value)} required={includePartner} /></div>
                             <div><Label>Luogo Nascita Partner *</Label><Input value={luogoNascitaPartner} onChange={(e) => setLuogoNascitaPartner(e.target.value)} required={includePartner} /></div>
                             <div><Label>Data Nascita Partner *</Label><Input type="date" value={dataNascitaPartner} onChange={(e) => setDataNascitaPartner(e.target.value)} required={includePartner} /></div>
-                            <div><Label>Professione Partner</Label><Input value={professionePartner} onChange={(e) => setProfessionePartner(e.target.value)} /></div>
+                            <div><Label>Professione Partner *</Label><Input value={professionePartner} onChange={(e) => setProfessionePartner(e.target.value)} required={includePartner} /></div>
                             <div className="md:col-span-2">
                               <FiscalCodeInput
                                 value={codiceFiscalePartner}
@@ -831,12 +906,34 @@ export default function BookingPage() {
 
                           <div className="grid md:grid-cols-2 gap-4 mt-4">
                             <div>
-                              <Label htmlFor="docFrontePartner">Documento Fronte Partner *</Label>
-                              <Input id="docFrontePartner" type="file" accept="image/*" onChange={(e) => setDocumentoFrentePartner(e.target.files?.[0] || null)} required={includePartner} />
+                              <Label htmlFor="docFrontePartner">Documento Fronte Partner * (max 5MB)</Label>
+                              <Input
+                                id="docFrontePartner"
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleDocumentoFrentePartner(e.target.files?.[0] || null)}
+                                required={includePartner}
+                              />
+                              {documentoFrentePartner && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {(documentoFrentePartner.size / (1024 * 1024)).toFixed(2)} MB
+                                </p>
+                              )}
                             </div>
                             <div>
-                              <Label htmlFor="docRetroPartner">Documento Retro Partner *</Label>
-                              <Input id="docRetroPartner" type="file" accept="image/*" onChange={(e) => setDocumentoRetroPartner(e.target.files?.[0] || null)} required={includePartner} />
+                              <Label htmlFor="docRetroPartner">Documento Retro Partner * (max 5MB)</Label>
+                              <Input
+                                id="docRetroPartner"
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleDocumentoRetroPartner(e.target.files?.[0] || null)}
+                                required={includePartner}
+                              />
+                              {documentoRetroPartner && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {(documentoRetroPartner.size / (1024 * 1024)).toFixed(2)} MB
+                                </p>
+                              )}
                             </div>
                           </div>
                         </div>
