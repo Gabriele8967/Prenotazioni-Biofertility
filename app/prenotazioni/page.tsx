@@ -474,12 +474,34 @@ export default function BookingPage() {
         }
       } else {
         console.error("❌ Errore prenotazione:", booking);
-        alert("Errore nella prenotazione: " + (booking.error || 'Errore sconosciuto'));
+
+        // Mostra errore dettagliato
+        let errorMessage = "Errore nella prenotazione:\n\n";
+        if (booking.error) {
+          errorMessage += booking.error;
+        }
+        if (booking.missingFields && booking.missingFields.length > 0) {
+          errorMessage += "\n\nCampi mancanti: " + booking.missingFields.join(', ');
+        }
+        if (booking.details) {
+          errorMessage += "\n\nDettagli: " + (Array.isArray(booking.details) ? booking.details.join(', ') : booking.details);
+        }
+
+        alert(errorMessage);
       }
     } catch (error) {
       console.error("❌ Errore critico durante prenotazione:", error);
       console.error("Stack trace:", error instanceof Error ? error.stack : 'N/D');
-      alert("Errore nella prenotazione. Controlla la console per i dettagli o contatta l'assistenza.");
+
+      let errorMsg = "Si è verificato un errore durante la prenotazione.\n\n";
+      if (error instanceof Error) {
+        errorMsg += "Dettagli: " + error.message;
+      } else {
+        errorMsg += "Errore sconosciuto.";
+      }
+      errorMsg += "\n\nSe il problema persiste, contatta l'assistenza:\n📞 06-8415269\n📧 info@biofertility.it";
+
+      alert(errorMsg);
     } finally {
       setLoading(false);
     }

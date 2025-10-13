@@ -80,10 +80,31 @@ export async function POST(request: NextRequest) {
     let existingPatient = await db.user.findUnique({ where: { email: sanitizedData.email } });
     const isReturningUser = !!existingPatient;
 
-    // Validazione dati obbligatori
-    if (!serviceId || !staffId || !sanitizedData.email || !sanitizedData.name || !startTime || !sanitizedData.fiscalCode) {
-      console.error("❌ [BOOKING] Dati mancanti:", { serviceId: !!serviceId, staffId: !!staffId, email: !!sanitizedData.email, name: !!sanitizedData.name, startTime: !!startTime, fiscalCode: !!sanitizedData.fiscalCode });
-      return NextResponse.json({ error: "Dati anagrafici o di prenotazione mancanti." }, { status: 400 });
+    // Validazione dati obbligatori completa
+    const missingFields: string[] = [];
+    if (!serviceId) missingFields.push('Servizio');
+    if (!staffId) missingFields.push('Operatore');
+    if (!sanitizedData.email) missingFields.push('Email');
+    if (!sanitizedData.name) missingFields.push('Nome');
+    if (!startTime) missingFields.push('Data e ora');
+    if (!sanitizedData.fiscalCode) missingFields.push('Codice Fiscale');
+    if (!sanitizedData.phone) missingFields.push('Telefono');
+    if (!luogoNascita) missingFields.push('Luogo di nascita');
+    if (!dataNascita) missingFields.push('Data di nascita');
+    if (!professione) missingFields.push('Professione');
+    if (!indirizzo) missingFields.push('Indirizzo');
+    if (!citta) missingFields.push('Città');
+    if (!provincia) missingFields.push('Provincia');
+    if (!cap) missingFields.push('CAP');
+    if (!numeroDocumento) missingFields.push('Numero documento');
+    if (!scadenzaDocumento) missingFields.push('Scadenza documento');
+
+    if (missingFields.length > 0) {
+      console.error("❌ [BOOKING] Campi obbligatori mancanti:", missingFields);
+      return NextResponse.json({
+        error: `Campi obbligatori mancanti: ${missingFields.join(', ')}`,
+        missingFields
+      }, { status: 400 });
     }
 
     // Richiedi documenti solo per i nuovi utenti

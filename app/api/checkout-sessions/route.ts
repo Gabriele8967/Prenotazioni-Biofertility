@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { db } from '@/lib/db';
 import { calculateStampDuty } from '@/lib/fattureincloud';
+import { handleApiError, logger } from '@/lib/error-handler';
 
 // Inizializza Stripe con la chiave segreta
 const stripe = process.env.STRIPE_SECRET_KEY
@@ -13,15 +14,21 @@ const stripe = process.env.STRIPE_SECRET_KEY
 
 export async function POST(request: NextRequest) {
   try {
+    logger.logInfo('Richiesta creazione checkout session', 'POST /api/checkout-sessions');
+
     if (!stripe) {
+      logger.logError('Stripe non configurato', 'POST /api/checkout-sessions');
       return NextResponse.json({ error: 'Stripe non configurato' }, { status: 500 });
     }
 
     const { bookingId } = await request.json();
 
     if (!bookingId) {
+      logger.logWarning('ID prenotazione mancante', 'POST /api/checkout-sessions');
       return NextResponse.json({ error: 'ID prenotazione mancante' }, { status: 400 });
     }
+
+    logger.logInfo(`Creazione checkout per booking ID: ${bookingId}`, 'POST /api/checkout-sessions');
 
     // Recupera i dettagli della prenotazione dal database
     const booking = await db.booking.findUnique({
@@ -33,8 +40,11 @@ export async function POST(request: NextRequest) {
     });
 
     if (!booking) {
+      logger.logWarning(`Prenotazione non trovata: ${bookingId}`, 'POST /api/checkout-sessions');
       return NextResponse.json({ error: 'Prenotazione non trovata' }, { status: 404 });
     }
+
+    logger.logInfo(`Checkout per paziente: ${booking.patient.email}, Servizio: ${booking.service.name}`, 'POST /api/checkout-sessions');
 
     // Calcola la marca da bollo (obbligatoria per fatture esenti IVA oltre €77,47)
     const stampDuty = calculateStampDuty(booking.service.price);
@@ -104,11 +114,15 @@ export async function POST(request: NextRequest) {
       data: { stripeSessionId: session.id },
     });
 
+    logger.logInfo(`✅ Checkout session creata: ${session.id}`, 'POST /api/checkout-sessions');
+
     return NextResponse.json({ sessionId: session.id, url: session.url });
 
   } catch (error) {
-    console.error('Errore nella creazione della sessione Stripe:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto';
-    return NextResponse.json({ error: 'Errore interno del server', details: errorMessage }, { status: 500 });
+    return handleApiError(
+      error,
+      'POST /api/checkout-sessions',
+      'Errore nella creazione della sessione di pagamento. Riprova tra qualche istante.'
+    );
   }
 }
