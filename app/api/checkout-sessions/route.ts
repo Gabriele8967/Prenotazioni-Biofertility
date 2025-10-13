@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     logger.logInfo('Richiesta creazione checkout session', 'POST /api/checkout-sessions');
 
     if (!stripe) {
-      logger.logError('Stripe non configurato', 'POST /api/checkout-sessions');
+      logger.logWarning('Stripe non configurato', 'POST /api/checkout-sessions');
       return NextResponse.json({ error: 'Stripe non configurato' }, { status: 500 });
     }
 
