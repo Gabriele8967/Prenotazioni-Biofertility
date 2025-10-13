@@ -32,6 +32,8 @@ type TimeSlot = { start: Date; end: Date; };
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FiscalCodeInput } from "@/components/FiscalCodeInput";
 
+import imageCompression from 'browser-image-compression';
+
 // Helper per convertire file in base64
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -40,6 +42,25 @@ const fileToBase64 = (file: File): Promise<string> => {
     reader.onload = () => resolve(reader.result as string);
     reader.onerror = error => reject(error);
   });
+};
+
+// Funzione per la compressione delle immagini
+const compressImage = async (file: File): Promise<File> => {
+  const options = {
+    maxSizeMB: 1, // Dimensione massima in MB
+    maxWidthOrHeight: 1920, // Risoluzione massima
+    useWebWorker: true,
+  };
+
+  try {
+    console.log(`Compressione immagine... Originale: ${(file.size / 1024 / 1024).toFixed(2)} MB`);
+    const compressedFile = await imageCompression(file, options);
+    console.log(`Immagine compressa! Nuovo: ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`);
+    return compressedFile;
+  } catch (error) {
+    console.error("Errore durante la compressione dell'immagine:", error);
+    return file; // Ritorna il file originale in caso di errore
+  }
 };
 
 // Debounce hook
@@ -144,30 +165,38 @@ export default function BookingPage() {
   };
 
   // Handler per documento fronte paziente
-  const handleDocumentoFronte = (file: File | null) => {
-    if (validateFileSize(file, "Documento Fronte")) {
-      setDocumentoFrente(file);
+  const handleDocumentoFronte = async (file: File | null) => {
+    if (!file) return;
+    const compressedFile = await compressImage(file);
+    if (validateFileSize(compressedFile, "Documento Fronte")) {
+      setDocumentoFrente(compressedFile);
     }
   };
 
   // Handler per documento retro paziente
-  const handleDocumentoRetro = (file: File | null) => {
-    if (validateFileSize(file, "Documento Retro")) {
-      setDocumentoRetro(file);
+  const handleDocumentoRetro = async (file: File | null) => {
+    if (!file) return;
+    const compressedFile = await compressImage(file);
+    if (validateFileSize(compressedFile, "Documento Retro")) {
+      setDocumentoRetro(compressedFile);
     }
   };
 
   // Handler per documento fronte partner
-  const handleDocumentoFrentePartner = (file: File | null) => {
-    if (validateFileSize(file, "Documento Fronte Partner")) {
-      setDocumentoFrentePartner(file);
+  const handleDocumentoFrentePartner = async (file: File | null) => {
+    if (!file) return;
+    const compressedFile = await compressImage(file);
+    if (validateFileSize(compressedFile, "Documento Fronte Partner")) {
+      setDocumentoFrentePartner(compressedFile);
     }
   };
 
   // Handler per documento retro partner
-  const handleDocumentoRetroPartner = (file: File | null) => {
-    if (validateFileSize(file, "Documento Retro Partner")) {
-      setDocumentoRetroPartner(file);
+  const handleDocumentoRetroPartner = async (file: File | null) => {
+    if (!file) return;
+    const compressedFile = await compressImage(file);
+    if (validateFileSize(compressedFile, "Documento Retro Partner")) {
+      setDocumentoRetroPartner(compressedFile);
     }
   };
 
@@ -382,6 +411,8 @@ export default function BookingPage() {
 
     setLoading(true);
     try {
+      let booking: any; // Dichiarazione di booking
+
       // Converti i file in base64
       console.log("🔄 Conversione documenti in base64...");
       const docFronteBase64 = documentoFrente ? await fileToBase64(documentoFrente) : null;
