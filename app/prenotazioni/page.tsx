@@ -33,6 +33,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FiscalCodeInput } from "@/components/FiscalCodeInput";
 
 import imageCompression from 'browser-image-compression';
+import { uploadMultipleFiles } from '@/lib/uploadToSupabase';
 
 // Helper per convertire file in base64
 const fileToBase64 = (file: File): Promise<string> => {
@@ -147,8 +148,8 @@ export default function BookingPage() {
   const [documentoRetroPartner, setDocumentoRetroPartner] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string>("");
 
-  // Dimensione massima file: 2MB per evitare crash serverless (limite Vercel 4.5MB)
-  const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB in bytes
+  // Dimensione massima file: 10MB (upload diretto a Supabase, non passa più da Vercel!)
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes
 
   // Funzione per validare dimensione file
   const validateFileSize = (file: File | null, fieldName: string): boolean => {
@@ -413,13 +414,32 @@ export default function BookingPage() {
     try {
       let booking: any; // Dichiarazione di booking
 
-      // Converti i file in base64
-      console.log("🔄 Conversione documenti in base64...");
-      const docFronteBase64 = documentoFrente ? await fileToBase64(documentoFrente) : null;
-      const docRetroBase64 = documentoRetro ? await fileToBase64(documentoRetro) : null;
-      const docFrontePartnerBase64 = documentoFrentePartner ? await fileToBase64(documentoFrentePartner) : null;
-      const docRetroPartnerBase64 = documentoRetroPartner ? await fileToBase64(documentoRetroPartner) : null;
-      console.log("✅ Conversione completata");
+      // Upload documenti direttamente a Supabase (senza passare dal server Vercel)
+      console.log("📤 Upload documenti a Supabase...");
+      const uploadResults = await uploadMultipleFiles(
+        [
+          { file: documentoFrente, label: 'documentoFrente' },
+          { file: documentoRetro, label: 'documentoRetro' },
+          { file: documentoFrentePartner, label: 'documentoFrentePartner' },
+          { file: documentoRetroPartner, label: 'documentoRetroPartner' },
+        ],
+        patientEmail
+      );
+
+      // Controlla errori upload
+      const failedUploads = Object.entries(uploadResults).filter(([_, result]) => !result.success);
+      if (failedUploads.length > 0) {
+        const errors = failedUploads.map(([label, result]) => `${label}: ${result.error}`).join('\n');
+        throw new Error(`Errore upload documenti:\n${errors}`);
+      }
+
+      // Estrai i path dei file uploadati (da salvare nel DB invece di base64)
+      const docFrontePath = uploadResults.documentoFrente?.filePath || null;
+      const docRetroPath = uploadResults.documentoRetro?.filePath || null;
+      const docFrontePartnerPath = uploadResults.documentoFrentePartner?.filePath || null;
+      const docRetroPartnerPath = uploadResults.documentoRetroPartner?.filePath || null;
+
+      console.log("✅ Upload completato:", { docFrontePath, docRetroPath });
 
       // Prepara i dati del partner se incluso
       const partnerData = includePartner ? {
@@ -443,8 +463,8 @@ export default function BookingPage() {
         serviceId: selectedService.id,
         staffId: selectedStaff,
         patientEmail,
-        hasDocFrente: !!docFronteBase64,
-        hasDocRetro: !!docRetroBase64,
+        hasDocFrente: !!docFrontePath,
+        hasDocRetro: !!docRetroPath,
         includePartner
       });
 
@@ -473,11 +493,11 @@ export default function BookingPage() {
           emailComunicazioni,
           // Dati partner
           partnerData: partnerData ? JSON.stringify(partnerData) : null,
-          // Documenti
-          documentoFrente: docFronteBase64,
-          documentoRetro: docRetroBase64,
-          documentoFrentePartner: docFrontePartnerBase64,
-          documentoRetroPartner: docRetroPartnerBase64,
+          // Documenti (ora salviamo solo i path, non base64!)
+          documentoFrente: docFrontePath,
+          documentoRetro: docRetroPath,
+          documentoFrentePartner: docFrontePartnerPath,
+          documentoRetroPartner: docRetroPartnerPath,
           // Consensi
           gdprConsent,
           privacyConsent,
@@ -893,7 +913,7 @@ export default function BookingPage() {
 
                         <div className="grid md:grid-cols-2 gap-4">
                           <div>
-                            <Label htmlFor="docFrente">Documento Fronte * (max 5MB)</Label>
+                            <Label htmlFor="docFrente">Documento Fronte * (max 10MB)</Label>
                             <div className="mt-2 flex items-center gap-2">
                               <Input
                                 id="docFrente"
@@ -911,7 +931,7 @@ export default function BookingPage() {
                             )}
                           </div>
                           <div>
-                            <Label htmlFor="docRetro">Documento Retro * (max 5MB)</Label>
+                            <Label htmlFor="docRetro">Documento Retro * (max 10MB)</Label>
                             <div className="mt-2 flex items-center gap-2">
                               <Input
                                 id="docRetro"
@@ -965,7 +985,7 @@ export default function BookingPage() {
 
                           <div className="grid md:grid-cols-2 gap-4 mt-4">
                             <div>
-                              <Label htmlFor="docFrontePartner">Documento Fronte Partner * (max 5MB)</Label>
+                              <Label htmlFor="docFrontePartner">Documento Fronte Partner * (max 10MB)</Label>
                               <Input
                                 id="docFrontePartner"
                                 type="file"
@@ -980,7 +1000,7 @@ export default function BookingPage() {
                               )}
                             </div>
                             <div>
-                              <Label htmlFor="docRetroPartner">Documento Retro Partner * (max 5MB)</Label>
+                              <Label htmlFor="docRetroPartner">Documento Retro Partner * (max 10MB)</Label>
                               <Input
                                 id="docRetroPartner"
                                 type="file"
