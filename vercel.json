@@ -6,5 +6,9 @@
     "app/api/**/*.ts": {
       "maxDuration": 10
     }
-  }
+  },
+  "crons": [{
+    "path": "/api/delete-file/cleanup",
+    "schedule": "0 3 * * *"
+  }]
 }
