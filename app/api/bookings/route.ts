@@ -269,7 +269,10 @@ export async function POST(request: NextRequest) {
         // Titolo evento con tutti i dati principali (come da formato centro medico)
         // Formato: "Tipo Visita - online/in sede, email, nome, telefono\nOrario\nIndirizzo"
         const timeRange = `${format(start, 'HH:mm')} - ${format(end, 'HH:mm')}`;
-        const eventTitle = `${service.name} - online, ${sanitizedData.email}, ${sanitizedData.name}, ${sanitizedData.phone || 'N/D'}\n${timeRange}\n${sanitizedData.indirizzo || 'N/D'}, ${sanitizedData.citta || 'N/D'} ${sanitizedData.provincia || ''} ${sanitizedData.cap || ''}`;
+        // Aggiungi "- online" solo se il servizio è nella categoria "Visita Online"
+        const isOnlineVisit = service.category === "Visita Online";
+        const visitType = isOnlineVisit ? `${service.name} - online` : service.name;
+        const eventTitle = `${visitType}, ${sanitizedData.email}, ${sanitizedData.name}, ${sanitizedData.phone || 'N/D'}\n${timeRange}\n${sanitizedData.indirizzo || 'N/D'}, ${sanitizedData.citta || 'N/D'} ${sanitizedData.provincia || ''} ${sanitizedData.cap || ''}`;
 
         const calendarEvent = await createGoogleCalendarEvent(
             eventTitle,
