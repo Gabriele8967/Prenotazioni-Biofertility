@@ -4,6 +4,8 @@ import { db } from '@/lib/db';
 import { headers } from 'next/headers';
 import { createAndSendInvoice } from '@/lib/fattureincloud';
 import { sendBookingConfirmationToAdmin, sendBookingConfirmationToClient } from '@/lib/email';
+import { createGoogleCalendarEvent } from '@/lib/google-calendar';
+import { format } from 'date-fns';
 
 const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY, {
@@ -42,21 +44,111 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      // 1. Conferma il pagamento nel DB
+      // 1. Recupera i dati completi della prenotazione per creare l'evento Calendar
+      const bookingData = await db.booking.findUnique({
+        where: { id: bookingId },
+        include: {
+          service: true,
+          patient: true,
+          staff: { select: { email: true, name: true } },
+        },
+      });
+
+      if (!bookingData) throw new Error('Prenotazione non trovata.');
+
+      // 2. Crea evento Google Calendar PRIMA di confermare il pagamento
+      console.log(`📅 Creazione evento Google Calendar per booking ${bookingId}...`);
+      let googleEventId: string | undefined = undefined;
+      try {
+        // Costruisci descrizione completa
+        const descriptionParts = [
+          `👤 DATI ANAGRAFICI`,
+          `Nome: ${bookingData.patient.name}`,
+          `Email: ${bookingData.patient.email}`,
+          `Telefono: ${bookingData.patient.phone || 'N/D'}`,
+          `Codice Fiscale: ${bookingData.patient.fiscalCode || 'N/D'}`,
+          `Data di nascita: ${bookingData.patient.birthDate ? new Date(bookingData.patient.birthDate).toLocaleDateString('it-IT') : 'N/D'}`,
+          `Luogo di nascita: ${bookingData.patient.luogoNascita || 'N/D'}`,
+          `Professione: ${bookingData.patient.professione || 'N/D'}`,
+          ``,
+          `📍 INDIRIZZO`,
+          `Via: ${bookingData.patient.indirizzo || 'N/D'}`,
+          `Città: ${bookingData.patient.citta || 'N/D'}`,
+          `Provincia: ${bookingData.patient.provincia || 'N/D'}`,
+          `CAP: ${bookingData.patient.cap || 'N/D'}`,
+          ``,
+          `📄 DOCUMENTO`,
+          `Numero: ${bookingData.patient.numeroDocumento || 'N/D'}`,
+          `Scadenza: ${bookingData.patient.scadenzaDocumento ? new Date(bookingData.patient.scadenzaDocumento).toLocaleDateString('it-IT') : 'N/D'}`,
+          ``,
+          `📧 COMUNICAZIONI`,
+          `Email comunicazioni: ${bookingData.patient.emailComunicazioni || bookingData.patient.email}`,
+        ];
+
+        // Aggiungi dati partner se presenti
+        if (bookingData.partnerData) {
+          try {
+            const partner = JSON.parse(bookingData.partnerData as string);
+            descriptionParts.push(
+              ``,
+              `👥 DATI PARTNER`,
+              `Nome: ${partner.name || 'N/D'}`,
+              `Email: ${partner.email || 'N/D'}`,
+              `Telefono: ${partner.phone || 'N/D'}`,
+              `Codice Fiscale: ${partner.fiscalCode || 'N/D'}`,
+              `Data di nascita: ${partner.dataNascita ? new Date(partner.dataNascita).toLocaleDateString('it-IT') : 'N/D'}`,
+              `Luogo di nascita: ${partner.luogoNascita || 'N/D'}`
+            );
+          } catch (e) {
+            console.error('Errore parsing partnerData:', e);
+          }
+        }
+
+        // Aggiungi note se presenti
+        if (bookingData.notes) {
+          descriptionParts.push(``, `📝 NOTE`, bookingData.notes);
+        }
+
+        // Titolo evento
+        const timeRange = `${format(bookingData.startTime, 'HH:mm')} - ${format(bookingData.endTime, 'HH:mm')}`;
+        const isOnlineVisit = bookingData.service.category === "Visita Online";
+        const visitType = isOnlineVisit ? `${bookingData.service.name} - online` : bookingData.service.name;
+        const eventTitle = `${visitType}, ${bookingData.patient.email}, ${bookingData.patient.name}, ${bookingData.patient.phone || 'N/D'}\n${timeRange}\n${bookingData.patient.indirizzo || 'N/D'}, ${bookingData.patient.citta || 'N/D'} ${bookingData.patient.provincia || ''} ${bookingData.patient.cap || ''}`;
+
+        const calendarEvent = await createGoogleCalendarEvent(
+          eventTitle,
+          descriptionParts.join('\n'),
+          bookingData.startTime,
+          bookingData.endTime,
+          bookingData.staff.email,
+          bookingData.patient.email
+        );
+        googleEventId = calendarEvent.id || undefined;
+        console.log(`✅ Evento Google Calendar creato: ${googleEventId}`);
+      } catch (calendarError) {
+        console.error(`❌ ERRORE CRITICO: Impossibile creare evento Calendar per booking ${bookingId}:`, calendarError);
+        // Se la creazione del Calendar fallisce, NON confermiamo il pagamento
+        throw new Error(`Creazione evento Calendar fallita: ${calendarError}`);
+      }
+
+      // 3. Conferma il pagamento nel DB e salva l'ID evento Calendar
       const paidBooking = await db.booking.update({
         where: { id: bookingId },
-        data: { paymentStatus: 'PAID' },
+        data: {
+          paymentStatus: 'PAID',
+          googleEventId: googleEventId,
+        },
       });
       if (!paidBooking) throw new Error('Prenotazione da aggiornare non trovata.');
-      console.log(`✅ Prenotazione ${bookingId} aggiornata a PAGATO.`);
+      console.log(`✅ Prenotazione ${bookingId} aggiornata a PAGATO con evento Calendar ${googleEventId}.`);
 
-      // 2. Invia email di notifica con allegati al centro medico
+      // 4. Invia email di notifica con allegati al centro medico
       await sendBookingConfirmationToAdmin(bookingId);
 
-      // 3. Invia email di conferma al cliente
+      // 5. Invia email di conferma al cliente
       await sendBookingConfirmationToClient(bookingId);
 
-      // 4. Crea e invia fattura
+      // 6. Crea e invia fattura
       try {
         const { invoiceId } = await createAndSendInvoice(bookingId);
         if (invoiceId) {
@@ -84,7 +176,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ received: true });
     
     } finally {
-        // 5. CANCELLAZIONE DATI SENSIBILI (SEMPRE E COMUNQUE)
+        // 7. CANCELLAZIONE DATI SENSIBILI (SEMPRE E COMUNQUE)
         // Questo blocco viene eseguito sia in caso di successo che di errore (dopo il catch),
         // garantendo la pulizia dei dati sensibili.
         try {

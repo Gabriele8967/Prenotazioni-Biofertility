@@ -214,85 +214,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log("📅 [BOOKING] Creazione evento Google Calendar...");
-    let googleEventId: string | undefined = undefined;
-    try {
-        // Costruisci una descrizione completa con tutti i dati del form
-        const descriptionParts = [
-            `👤 DATI ANAGRAFICI`,
-            `Nome: ${sanitizedData.name}`,
-            `Email: ${sanitizedData.email}`,
-            `Telefono: ${sanitizedData.phone || 'N/D'}`,
-            `Codice Fiscale: ${sanitizedData.fiscalCode || 'N/D'}`,
-            `Data di nascita: ${dataNascita ? new Date(dataNascita).toLocaleDateString('it-IT') : 'N/D'}`,
-            `Luogo di nascita: ${sanitizedData.luogoNascita || 'N/D'}`,
-            `Professione: ${sanitizedData.professione || 'N/D'}`,
-            ``,
-            `📍 INDIRIZZO`,
-            `Via: ${sanitizedData.indirizzo || 'N/D'}`,
-            `Città: ${sanitizedData.citta || 'N/D'}`,
-            `Provincia: ${sanitizedData.provincia || 'N/D'}`,
-            `CAP: ${sanitizedData.cap || 'N/D'}`,
-            ``,
-            `📄 DOCUMENTO`,
-            `Numero: ${sanitizedData.numeroDocumento || 'N/D'}`,
-            `Scadenza: ${scadenzaDocumento ? new Date(scadenzaDocumento).toLocaleDateString('it-IT') : 'N/D'}`,
-            ``,
-            `📧 COMUNICAZIONI`,
-            `Email comunicazioni: ${sanitizedData.emailComunicazioni || sanitizedData.email}`,
-        ];
-
-        // Aggiungi dati partner se presenti
-        if (partnerData) {
-            try {
-                const partner = JSON.parse(partnerData);
-                descriptionParts.push(
-                    ``,
-                    `👥 DATI PARTNER`,
-                    `Nome: ${partner.name || 'N/D'}`,
-                    `Email: ${partner.email || 'N/D'}`,
-                    `Telefono: ${partner.phone || 'N/D'}`,
-                    `Codice Fiscale: ${partner.fiscalCode || 'N/D'}`,
-                    `Data di nascita: ${partner.dataNascita ? new Date(partner.dataNascita).toLocaleDateString('it-IT') : 'N/D'}`,
-                    `Luogo di nascita: ${partner.luogoNascita || 'N/D'}`
-                );
-            } catch (e) {
-                console.error('Errore parsing partnerData:', e);
-            }
-        }
-
-        // Aggiungi note se presenti
-        if (sanitizedNotes) {
-            descriptionParts.push(``, `📝 NOTE`, sanitizedNotes);
-        }
-
-        // Titolo evento con tutti i dati principali (come da formato centro medico)
-        // Formato: "Tipo Visita - online/in sede, email, nome, telefono\nOrario\nIndirizzo"
-        const timeRange = `${format(start, 'HH:mm')} - ${format(end, 'HH:mm')}`;
-        // Aggiungi "- online" solo se il servizio è nella categoria "Visita Online"
-        const isOnlineVisit = service.category === "Visita Online";
-        const visitType = isOnlineVisit ? `${service.name} - online` : service.name;
-        const eventTitle = `${visitType}, ${sanitizedData.email}, ${sanitizedData.name}, ${sanitizedData.phone || 'N/D'}\n${timeRange}\n${sanitizedData.indirizzo || 'N/D'}, ${sanitizedData.citta || 'N/D'} ${sanitizedData.provincia || ''} ${sanitizedData.cap || ''}`;
-
-        const calendarEvent = await createGoogleCalendarEvent(
-            eventTitle,
-            descriptionParts.join('\n'),
-            start, end, staff.email, sanitizedData.email
-        );
-        googleEventId = calendarEvent.id || undefined;
-        console.log(`✅ [BOOKING] Evento Google Calendar creato: ${googleEventId}`);
-    } catch (calendarError) {
-        console.error("⚠️  [BOOKING] Errore Google Calendar (non bloccante):", calendarError);
-        // Non bloccare il flusso se la creazione dell'evento fallisce
-    }
-
     console.log("💾 [BOOKING] Salvataggio prenotazione nel database...");
+    console.log("⏳ [BOOKING] L'evento Google Calendar verrà creato dopo la conferma del pagamento");
     let booking;
     try {
       booking = await db.booking.create({
         data: {
           serviceId, staffId, patientId: patient.id, startTime: start, endTime: end, notes: sanitizedNotes,
-          googleEventId: googleEventId,
+          googleEventId: null, // Verrà aggiornato dopo il pagamento
           status: "PENDING",
           partnerData: partnerData as string | undefined,
           documentoFrente,
