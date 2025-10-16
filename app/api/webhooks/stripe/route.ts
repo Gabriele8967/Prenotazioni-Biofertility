@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `Webhook Error: ${errorMessage}` }, { status: 400 });
   }
 
+  // Gestione checkout completato con successo
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session;
     const bookingId = session.metadata?.bookingId;
@@ -196,7 +197,53 @@ export async function POST(request: NextRequest) {
         }
     }
 
-  } else {
+  }
+
+  // Gestione checkout scaduto o cancellato dall'utente
+  else if (event.type === 'checkout.session.expired') {
+    const session = event.data.object as Stripe.Checkout.Session;
+    const bookingId = session.metadata?.bookingId;
+
+    if (bookingId) {
+      try {
+        console.log(`🗑️ Checkout scaduto/cancellato - eliminazione booking PENDING ${bookingId}...`);
+
+        // Elimina la prenotazione PENDING
+        await db.booking.delete({
+          where: { id: bookingId },
+        });
+
+        console.log(`✅ Booking PENDING ${bookingId} eliminato con successo (checkout scaduto/cancellato)`);
+      } catch (error) {
+        console.error(`❌ Errore durante eliminazione booking ${bookingId}:`, error);
+        // Non bloccare, rispondi comunque 200 a Stripe
+      }
+    }
+  }
+
+  // Gestione pagamento fallito
+  else if (event.type === 'payment_intent.payment_failed') {
+    const paymentIntent = event.data.object as Stripe.PaymentIntent;
+
+    // Cerca il booking tramite la checkout session collegata
+    try {
+      if (paymentIntent.metadata?.bookingId) {
+        const bookingId = paymentIntent.metadata.bookingId;
+        console.log(`❌ Pagamento fallito - eliminazione booking PENDING ${bookingId}...`);
+
+        await db.booking.delete({
+          where: { id: bookingId },
+        });
+
+        console.log(`✅ Booking PENDING ${bookingId} eliminato con successo (pagamento fallito)`);
+      }
+    } catch (error) {
+      console.error(`❌ Errore durante eliminazione booking per pagamento fallito:`, error);
+      // Non bloccare, rispondi comunque 200 a Stripe
+    }
+  }
+
+  else {
     console.warn(`🤷‍♀️ Evento non gestito: ${event.type}`);
   }
 
