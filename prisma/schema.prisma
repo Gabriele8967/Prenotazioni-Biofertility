@@ -80,6 +80,8 @@ model Service {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   category        String?
+  locationId      String?   // ID della sede (via_velletri, viale_eroi_di_rodi)
+  onRequest       Boolean   @default(false) // Se true, il servizio è su richiesta (no pagamento immediato)
 
   // Relations
   staffMembers    User[]    @relation("StaffServices")
@@ -87,6 +89,7 @@ model Service {
 
   @@index([name])
   @@index([category])
+  @@index([locationId])
   @@map("services")
 }
 

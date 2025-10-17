@@ -19,6 +19,7 @@ export default function AdminServicesPage() {
     notes: "",
     color: "#3b82f6",
     staffIds: [] as string[],
+    onRequest: false,
   });
 
   useEffect(() => {
@@ -57,6 +58,7 @@ export default function AdminServicesPage() {
         notes: "",
         color: "#3b82f6",
         staffIds: [],
+        onRequest: false,
       });
     }
   };
@@ -164,6 +166,20 @@ export default function AdminServicesPage() {
                   </div>
                 </div>
 
+                <div>
+                  <Label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={formData.onRequest}
+                      onChange={(e) => setFormData({ ...formData, onRequest: e.target.checked })}
+                    />
+                    Servizio su Richiesta
+                  </Label>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Se attivato, questo servizio richiederà conferma di disponibilità dal centro prima della prenotazione (no pagamento immediato)
+                  </p>
+                </div>
+
                 <Button type="submit">Crea Visita</Button>
               </form>
             </CardContent>
@@ -191,6 +207,11 @@ export default function AdminServicesPage() {
                   <p><strong>Durata:</strong> {service.durationMinutes} min</p>
                   <p><strong>Prezzo:</strong> €{service.price}</p>
                   <p><strong>Staff:</strong> {service.staffMembers.map((s: any) => s.name).join(", ") || "Nessuno"}</p>
+                  {service.onRequest && (
+                    <p className="text-xs bg-orange-100 text-orange-800 p-2 rounded mt-2 font-semibold">
+                      🔔 Servizio su Richiesta
+                    </p>
+                  )}
                   {service.notes && <p className="text-xs bg-yellow-50 p-2 rounded mt-2">{service.notes}</p>}
                 </div>
               </CardContent>

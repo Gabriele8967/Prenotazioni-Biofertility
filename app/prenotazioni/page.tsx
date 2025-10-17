@@ -18,6 +18,7 @@ type Service = {
   notes: string | null;
   staffMembers: Array<{ id: string; name: string; email: string; }>;
   category: string | null;
+  onRequest: boolean;
 };
 
 type Location = {
@@ -395,6 +396,54 @@ export default function BookingPage() {
     e.preventDefault();
     if (!selectedService || !selectedStaff || !selectedSlot) return;
 
+    // Se il servizio è su richiesta, usa un flusso diverso
+    if (selectedService.onRequest) {
+      setLoading(true);
+      try {
+        console.log("📧 Invio richiesta servizio su richiesta...");
+        const res = await fetch("/api/service-requests", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            serviceId: selectedService.id,
+            patientName,
+            patientEmail,
+            patientPhone,
+            luogoNascita,
+            dataNascita,
+            professione,
+            indirizzo,
+            citta,
+            provincia,
+            cap,
+            codiceFiscale,
+            notes,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          alert(`✅ ${data.message}\n\nTi contatteremo entro 2-3 giorni lavorativi per confermare la disponibilità e fissare l'appuntamento.`);
+          window.location.href = "/";
+        } else {
+          console.error("❌ Errore richiesta:", data);
+          let errorMessage = "Errore nell'invio della richiesta:\n\n";
+          if (data.error) errorMessage += data.error;
+          if (data.missingFields) errorMessage += `\nCampi mancanti: ${data.missingFields.join(', ')}`;
+          if (data.details) errorMessage += `\nDettagli: ${Array.isArray(data.details) ? data.details.join(', ') : data.details}`;
+          alert(errorMessage);
+        }
+      } catch (error) {
+        console.error("❌ Errore critico durante richiesta:", error);
+        alert("Si è verificato un errore durante l'invio della richiesta. Riprova o contatta l'assistenza.");
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Flusso normale per servizi con pagamento immediato
     // Validazione dimensione file (max 5MB per file)
     const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
     const checkFileSize = (file: File | null, name: string) => {
@@ -673,7 +722,14 @@ export default function BookingPage() {
                                 <Clock className="w-4 h-4 text-blue-600" />
                                 {service.durationMinutes} minuti
                               </p>
-                              <p className="font-bold text-xl text-blue-600">€{service.price.toFixed(2)}</p>
+                              {service.onRequest ? (
+                                <div className="space-y-1">
+                                  <p className="font-bold text-lg text-orange-600">Su Richiesta</p>
+                                  <p className="text-xs text-gray-500">Prezzo indicativo: €{service.price.toFixed(2)}</p>
+                                </div>
+                              ) : (
+                                <p className="font-bold text-xl text-blue-600">€{service.price.toFixed(2)}</p>
+                              )}
                             </div>
                           </CardContent>
                         </Card>
@@ -1046,31 +1102,42 @@ export default function BookingPage() {
                     </div>
 
                     {/* Riepilogo */}
-                    <div className="bg-blue-50 p-4 rounded-lg space-y-2">
-                      <p className="font-semibold text-lg border-b border-blue-200 pb-2">Riepilogo Prenotazione</p>
+                    <div className={selectedService?.onRequest ? "bg-orange-50 p-4 rounded-lg space-y-2" : "bg-blue-50 p-4 rounded-lg space-y-2"}>
+                      <p className="font-semibold text-lg border-b border-blue-200 pb-2">
+                        {selectedService?.onRequest ? "Riepilogo Richiesta" : "Riepilogo Prenotazione"}
+                      </p>
                       <p className="text-sm font-medium">{selectedService?.name}</p>
-                      <p className="text-sm text-gray-600">{selectedSlot.start.toLocaleDateString("it-IT")} alle {selectedSlot.start.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}</p>
-
-                      <div className="border-t border-blue-200 pt-2 mt-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Prezzo servizio:</span>
-                          <span className="font-medium">€{selectedService?.price.toFixed(2)}</span>
+                      {selectedService?.onRequest ? (
+                        <div className="bg-orange-100 p-3 rounded mt-2">
+                          <p className="text-sm font-semibold text-orange-800">⚠️ Servizio su Richiesta</p>
+                          <p className="text-xs text-orange-700 mt-1">
+                            Questo servizio richiede conferma di disponibilità. Ti contatteremo entro 2-3 giorni lavorativi per fissare l'appuntamento.
+                          </p>
+                          <p className="text-xs text-gray-600 mt-2">Prezzo indicativo: €{selectedService?.price.toFixed(2)}</p>
                         </div>
-                        {selectedService && selectedService.price > 77.47 && (
-                          <div className="flex justify-between text-sm text-gray-600 mt-1">
-                            <span>Marca da bollo (art. 15 DPR 642/72):</span>
-                            <span className="font-medium">€2,00</span>
+                      ) : (
+                        <>
+                          <p className="text-sm text-gray-600">{selectedSlot.start.toLocaleDateString("it-IT")} alle {selectedSlot.start.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}</p>
+                          <div className="border-t border-blue-200 pt-2 mt-2">
+                            <div className="flex justify-between text-sm">
+                              <span>Prezzo servizio:</span>
+                              <span className="font-medium">€{selectedService?.price.toFixed(2)}</span>
+                            </div>
+                            {selectedService && selectedService.price > 77.47 && (
+                              <div className="flex justify-between text-sm text-gray-600 mt-1">
+                                <span>Marca da bollo (art. 15 DPR 642/72):</span>
+                                <span className="font-medium">€2,00</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between text-lg font-bold mt-2 pt-2 border-t border-blue-300">
+                              <span>Totale da pagare:</span>
+                              <span className="text-blue-600">€{selectedService ? (selectedService.price + (selectedService.price > 77.47 ? 2 : 0)).toFixed(2) : '0.00'}</span>
+                            </div>
                           </div>
-                        )}
-                        <div className="flex justify-between text-lg font-bold mt-2 pt-2 border-t border-blue-300">
-                          <span>Totale da pagare:</span>
-                          <span className="text-blue-600">€{selectedService ? (selectedService.price + (selectedService.price > 77.47 ? 2 : 0)).toFixed(2) : '0.00'}</span>
-                        </div>
-                      </div>
 
-                      {selectedService && selectedService.price > 77.47 && (
-                        <p className="text-xs text-gray-500 bg-white p-2 rounded mt-2">
-                          ℹ️ La marca da bollo è obbligatoria per le prestazioni sanitarie esenti IVA con importo superiore a €77,47
+                          {selectedService && selectedService.price > 77.47 && (
+                            <p className="text-xs text-gray-500 bg-white p-2 rounded mt-2">
+                              ℹ️ La marca da bollo è obbligatoria per le prestazioni sanitarie esenti IVA con importo superiore a €77,47
                         </p>
                       )}
                     </div>
@@ -1088,7 +1155,13 @@ export default function BookingPage() {
             <div className="flex gap-2">
               <Button variant="outline" type="button" onClick={() => setStep(3)}>Indietro</Button>
               <Button type="submit" disabled={loading || !userChecked || !gdprConsent || !privacyConsent} className="flex-1">
-                {loading ? <><Loader2 className="animate-spin mr-2" />Elaborazione...</> : "Procedi al Pagamento"}
+                {loading ? (
+                  <><Loader2 className="animate-spin mr-2" />Elaborazione...</>
+                ) : selectedService?.onRequest ? (
+                  "Invia Richiesta"
+                ) : (
+                  "Procedi al Pagamento"
+                )}
               </Button>
             </div>
           </form>

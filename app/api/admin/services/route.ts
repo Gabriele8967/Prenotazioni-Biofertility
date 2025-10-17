@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, description, durationMinutes, price, notes, color, staffIds } = body;
+    const { name, description, durationMinutes, price, notes, color, staffIds, onRequest } = body;
 
     if (!name || !durationMinutes || price === undefined) {
       return NextResponse.json({ error: "Dati mancanti" }, { status: 400 });
@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
         notes,
         color: color || "#3b82f6",
         active: true,
+        onRequest: onRequest || false,
         staffMembers: staffIds
           ? {
               connect: staffIds.map((id: string) => ({ id })),
