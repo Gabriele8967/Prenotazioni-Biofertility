@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
         active: true,
         color: true,
         category: true,
+        onRequest: true,
         createdAt: true,
         updatedAt: true,
         staffMembers: {
