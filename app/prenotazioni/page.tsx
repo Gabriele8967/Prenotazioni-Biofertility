@@ -380,12 +380,9 @@ export default function BookingPage() {
     setSelectedStaff("");
     setSelectedDate(undefined);
 
-    // Se il servizio è su richiesta, salta direttamente allo step 4 (dati paziente)
-    if (service.onRequest) {
-      setStep(4);
-    } else {
-      setStep(2);
-    }
+    // Se il servizio è su richiesta, passa direttamente allo step 2 (dati paziente)
+    // altrimenti step 2 normale (selezione sede/staff)
+    setStep(2);
   };
 
   const handleStaffSelect = (staffId: string) => {
@@ -834,8 +831,8 @@ export default function BookingPage() {
           </div>
         )}
 
-        {/* Step 2: Select Staff and Location */}
-        {step === 2 && selectedService && (
+        {/* Step 2: Select Staff and Location (OR Anagrafica for onRequest) */}
+        {step === 2 && selectedService && !selectedService.onRequest && (
           <div>
             <h2 className="text-xl sm:text-2xl font-semibold mb-4">Scegli la Sede e l&apos;Operatore</h2>
 
@@ -1001,11 +998,15 @@ export default function BookingPage() {
           </div>
         )}
 
-        {/* Step 4: Patient Info & Documents */}
-        {step === 4 && (selectedSlot || selectedService?.onRequest) && (
+        {/* Step 2 for onRequest OR Step 4 for normal: Patient Info & Documents */}
+        {((step === 2 && selectedService?.onRequest) || (step === 4 && selectedSlot)) && (
           <form onSubmit={handleSubmit}>
             <Card className="mb-6">
-              <CardHeader><CardTitle>Step 4: Anagrafica e Consensi</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle>
+                  {selectedService?.onRequest ? 'Step 2: Anagrafica e Consensi' : 'Step 4: Anagrafica e Consensi'}
+                </CardTitle>
+              </CardHeader>
               <CardContent>
                 {/* Email con check utente esistente */}
                 <div className="mb-6">
@@ -1249,7 +1250,13 @@ export default function BookingPage() {
             </Card>
 
             <div className="flex gap-2">
-              <Button variant="outline" type="button" onClick={() => setStep(3)}>Indietro</Button>
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => setStep(selectedService?.onRequest ? 1 : 3)}
+              >
+                Indietro
+              </Button>
               <Button type="submit" disabled={loading || !userChecked || !gdprConsent || !privacyConsent} className="flex-1">
                 {loading ? (
                   <><Loader2 className="animate-spin mr-2" />Elaborazione...</>
