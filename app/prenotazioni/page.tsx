@@ -1002,7 +1002,7 @@ export default function BookingPage() {
         )}
 
         {/* Step 4: Patient Info & Documents */}
-        {step === 4 && selectedSlot && (
+        {step === 4 && (selectedSlot || selectedService?.onRequest) && (
           <form onSubmit={handleSubmit}>
             <Card className="mb-6">
               <CardHeader><CardTitle>Step 4: Anagrafica e Consensi</CardTitle></CardHeader>
@@ -1209,7 +1209,7 @@ export default function BookingPage() {
                           </p>
                           <p className="text-xs text-gray-600 mt-2">Prezzo indicativo: €{selectedService?.price.toFixed(2)}</p>
                         </div>
-                      ) : (
+                      ) : selectedSlot ? (
                         <>
                           <p className="text-sm text-gray-600">{selectedSlot.start.toLocaleDateString("it-IT")} alle {selectedSlot.start.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}</p>
                           <div className="border-t border-blue-200 pt-2 mt-2">
@@ -1235,7 +1235,7 @@ export default function BookingPage() {
                             </p>
                           )}
                         </>
-                      )}
+                      ) : null}
                     </div>
 
                     {/* Note aggiuntive */}
