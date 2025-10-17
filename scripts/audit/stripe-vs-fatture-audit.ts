@@ -38,7 +38,7 @@ if (!FATTURE_API_KEY || !FATTURE_API_UID) {
 }
 
 const stripe = new Stripe(STRIPE_SECRET_KEY, {
-  apiVersion: '2024-12-18.acacia',
+  apiVersion: '2025-09-30.clover',
 });
 
 // ========== TYPES ==========
@@ -94,7 +94,7 @@ async function fetchStripePayments(monthsBack: number = 3): Promise<StripePaymen
   let startingAfterPI: string | undefined = undefined;
 
   while (hasMorePI) {
-    const paymentIntents = await stripe.paymentIntents.list({
+    const paymentIntents: any = await stripe.paymentIntents.list({
       created: { gte: startTimestamp },
       limit: 100,
       starting_after: startingAfterPI,
@@ -129,7 +129,7 @@ async function fetchStripePayments(monthsBack: number = 3): Promise<StripePaymen
   let startingAfterCS: string | undefined = undefined;
 
   while (hasMoreCS) {
-    const sessions = await stripe.checkout.sessions.list({
+    const sessions: any = await stripe.checkout.sessions.list({
       created: { gte: startTimestamp },
       limit: 100,
       starting_after: startingAfterCS,

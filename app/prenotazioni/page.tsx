@@ -1138,7 +1138,9 @@ export default function BookingPage() {
                           {selectedService && selectedService.price > 77.47 && (
                             <p className="text-xs text-gray-500 bg-white p-2 rounded mt-2">
                               ℹ️ La marca da bollo è obbligatoria per le prestazioni sanitarie esenti IVA con importo superiore a €77,47
-                        </p>
+                            </p>
+                          )}
+                        </>
                       )}
                     </div>
 
