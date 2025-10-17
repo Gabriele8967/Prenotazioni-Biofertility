@@ -379,7 +379,13 @@ export default function BookingPage() {
     setSelectedService(service);
     setSelectedStaff("");
     setSelectedDate(undefined);
-    setStep(2);
+
+    // Se il servizio è su richiesta, salta direttamente allo step 4 (dati paziente)
+    if (service.onRequest) {
+      setStep(4);
+    } else {
+      setStep(2);
+    }
   };
 
   const handleStaffSelect = (staffId: string) => {
@@ -394,7 +400,7 @@ export default function BookingPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedService || !selectedStaff || !selectedSlot) return;
+    if (!selectedService) return;
 
     // Se il servizio è su richiesta, usa un flusso diverso
     if (selectedService.onRequest) {
@@ -424,8 +430,8 @@ export default function BookingPage() {
         const data = await res.json();
 
         if (res.ok) {
-          alert(`✅ ${data.message}\n\nTi contatteremo entro 2-3 giorni lavorativi per confermare la disponibilità e fissare l'appuntamento.`);
-          window.location.href = "/";
+          // Mostra schermata di conferma
+          setBookingComplete(true);
         } else {
           console.error("❌ Errore richiesta:", data);
           let errorMessage = "Errore nell'invio della richiesta:\n\n";
@@ -444,6 +450,11 @@ export default function BookingPage() {
     }
 
     // Flusso normale per servizi con pagamento immediato
+    if (!selectedStaff || !selectedSlot) {
+      alert('Errore: seleziona staff e slot temporale');
+      return;
+    }
+
     // Validazione dimensione file (max 5MB per file)
     const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
     const checkFileSize = (file: File | null, name: string) => {
@@ -614,6 +625,87 @@ export default function BookingPage() {
   };
 
   if (bookingComplete) {
+    // Schermata diversa per servizi su richiesta
+    if (selectedService?.onRequest) {
+      return (
+        <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white py-12">
+          <div className="container mx-auto px-4 max-w-2xl">
+            <Card className="border-2 border-orange-200">
+              <CardHeader className="bg-gradient-to-r from-orange-100 to-yellow-100">
+                <CardTitle className="text-center text-3xl text-orange-700 flex items-center justify-center gap-3">
+                  <span className="text-4xl">📩</span>
+                  Richiesta Inviata!
+                </CardTitle>
+                <CardDescription className="text-center text-orange-800 mt-2 text-base">
+                  La tua richiesta è stata ricevuta con successo
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6 pt-6">
+                <div className="bg-orange-50 border-2 border-orange-200 p-6 rounded-lg space-y-4">
+                  <div className="text-center">
+                    <p className="text-lg font-semibold text-orange-900 mb-2">
+                      📋 Servizio Richiesto
+                    </p>
+                    <p className="text-xl font-bold text-orange-700">
+                      {selectedService.name}
+                    </p>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-lg border border-orange-200">
+                    <p className="text-sm font-semibold text-gray-700 mb-3">
+                      ⏰ Cosa succede ora?
+                    </p>
+                    <ol className="text-sm space-y-2 text-gray-700">
+                      <li className="flex items-start gap-2">
+                        <span className="font-bold text-orange-600 min-w-[20px]">1.</span>
+                        <span>Il Centro Biofertility riceverà la tua richiesta via email</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="font-bold text-orange-600 min-w-[20px]">2.</span>
+                        <span>Verranno verificate le disponibilità per questo servizio</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="font-bold text-orange-600 min-w-[20px]">3.</span>
+                        <span><strong>Ti contatteremo entro 2-3 giorni lavorativi</strong> per fissare l'appuntamento</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="font-bold text-orange-600 min-w-[20px]">4.</span>
+                        <span>Il pagamento verrà effettuato direttamente presso il centro</span>
+                      </li>
+                    </ol>
+                  </div>
+
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <p className="text-sm font-semibold text-blue-900 mb-2">
+                      📧 Email di Conferma
+                    </p>
+                    <p className="text-sm text-blue-800">
+                      Riceverai a breve una email di conferma all'indirizzo <strong>{patientEmail}</strong> con tutti i dettagli della richiesta.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
+                  <p className="text-sm text-yellow-900 text-center">
+                    <strong>📞 Hai bisogno di assistenza?</strong><br/>
+                    Contattaci: <strong>06 841 5269</strong> | <strong>centrimanna2@gmail.com</strong>
+                  </p>
+                </div>
+
+                <Button
+                  onClick={() => window.location.href = "/"}
+                  className="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3"
+                >
+                  Torna alla Home
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      );
+    }
+
+    // Schermata per pagamenti completati
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-12">
         <div className="container mx-auto px-4 max-w-2xl">
@@ -1097,7 +1189,9 @@ export default function BookingPage() {
 
                       <div className="bg-blue-100 border-2 border-blue-300 rounded-lg p-4">
                         <p className="text-sm font-semibold text-blue-900">🔏 Firma Digitale</p>
-                        <p className="text-xs text-blue-800 mt-1">Cliccando su &quot;Procedi al Pagamento&quot;, apponi firma digitale ai consensi. Timestamp: {new Date().toISOString()}</p>
+                        <p className="text-xs text-blue-800 mt-1">
+                          Cliccando su &quot;{selectedService?.onRequest ? 'Invia Richiesta' : 'Procedi al Pagamento'}&quot;, apponi firma digitale ai consensi. Timestamp: {new Date().toISOString()}
+                        </p>
                       </div>
                     </div>
 
