@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar as CalendarIcon, Clock, User, CheckCircle2, Loader2, UploadCloud } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, User, CheckCircle2, Loader2, UploadCloud, Search, X } from "lucide-react";
 import { format } from 'date-fns';
 import { Calendar } from "@/components/ui/calendar";
 
@@ -91,7 +91,21 @@ export default function BookingPage() {
   const [datesWithSlots, setDatesWithSlots] = useState<Date[]>([]);
   const [checkingAvailability, setCheckingAvailability] = useState(false);
 
-  const groupedServices = services.reduce((acc, service) => {
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Filter services based on search query
+  const filteredServices = services.filter((service) => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      service.name.toLowerCase().includes(query) ||
+      (service.description && service.description.toLowerCase().includes(query)) ||
+      (service.category && service.category.toLowerCase().includes(query))
+    );
+  });
+
+  const groupedServices = filteredServices.reduce((acc, service) => {
     const category = service.category || 'Altro'; // Default category if none is provided
     if (category === 'Analisi') return acc; // Exclude 'Analisi' category
     if (!acc[category]) {
@@ -760,73 +774,169 @@ export default function BookingPage() {
         {step === 1 && (
           <div>
             <h2 className="text-xl sm:text-2xl font-semibold mb-4">Scegli la Visita</h2>
-            <Tabs defaultValue="Prestazioni Biofertility" className="w-full">
-              <TabsList className="flex flex-wrap gap-2 h-auto bg-transparent justify-center mb-6">
-                {Object.keys(groupedServices).sort((a, b) => {
-                  // "Prestazioni Biofertility" sempre per prima
-                  if (a === "Prestazioni Biofertility") return -1;
-                  if (b === "Prestazioni Biofertility") return 1;
-                  return a.localeCompare(b);
-                }).map((category) => (
-                  <TabsTrigger 
-                    key={category} 
-                    value={category} 
-                    className="px-6 py-3 text-sm font-medium text-gray-700 bg-white border-2 border-gray-200 rounded-full data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:border-blue-600 data-[state=active]:shadow-md hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 whitespace-nowrap"
-                  >
-                    {category}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              {Object.entries(groupedServices).map(([category, servicesInCategory]) => {
-                // Ordina i servizi: Prima visita ginecologica, poi Seconda visita ginecologica, poi gli altri
-                const sortedServices = [...servicesInCategory].sort((a, b) => {
-                  const isPrimaA = a.name.toLowerCase().includes('prima visita ginecologica');
-                  const isPrimaB = b.name.toLowerCase().includes('prima visita ginecologica');
-                  const isSecondaA = a.name.toLowerCase().includes('seconda visita ginecologica');
-                  const isSecondaB = b.name.toLowerCase().includes('seconda visita ginecologica');
-                  
-                  if (isPrimaA) return -1;
-                  if (isPrimaB) return 1;
-                  if (isSecondaA) return -1;
-                  if (isSecondaB) return 1;
-                  return 0;
-                });
 
-                return (
-                  <TabsContent key={category} value={category} className="mt-0">
-                    <div className="mb-4 text-center">
-                      <h3 className="text-lg font-semibold text-gray-800">{category}</h3>
-                      <p className="text-sm text-gray-500 mt-1">{servicesInCategory.length} {servicesInCategory.length === 1 ? 'servizio disponibile' : 'servizi disponibili'}</p>
-                    </div>
+            {/* Search Bar */}
+            <div className="mb-6">
+              <div className="relative max-w-2xl mx-auto">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Search className="h-5 w-5 text-gray-400" />
+                </div>
+                <Input
+                  type="text"
+                  placeholder="Cerca una prestazione per nome, descrizione o categoria..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-11 pr-10 py-6 text-base border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 rounded-xl shadow-sm transition-all"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                )}
+              </div>
+              {searchQuery && (
+                <p className="text-center text-sm text-gray-600 mt-3">
+                  {filteredServices.length === 0
+                    ? "Nessuna prestazione trovata"
+                    : `${filteredServices.length} prestazione${filteredServices.length !== 1 ? 'i' : ''} trovata${filteredServices.length !== 1 ? 'e' : ''}`
+                  }
+                </p>
+              )}
+            </div>
+
+            <Tabs defaultValue="Prestazioni Biofertility" className="w-full">
+              {!searchQuery && (
+                <TabsList className="flex flex-wrap gap-2 h-auto bg-transparent justify-center mb-6">
+                  {Object.keys(groupedServices).sort((a, b) => {
+                    // "Prestazioni Biofertility" sempre per prima
+                    if (a === "Prestazioni Biofertility") return -1;
+                    if (b === "Prestazioni Biofertility") return 1;
+                    return a.localeCompare(b);
+                  }).map((category) => (
+                    <TabsTrigger
+                      key={category}
+                      value={category}
+                      className="px-6 py-3 text-sm font-medium text-gray-700 bg-white border-2 border-gray-200 rounded-full data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:border-blue-600 data-[state=active]:shadow-md hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 whitespace-nowrap"
+                    >
+                      {category}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              )}
+              {searchQuery ? (
+                // When searching, show all results in a single view
+                <div className="mt-6">
+                  {filteredServices.length > 0 ? (
                     <div className="grid md:grid-cols-2 gap-4">
-                      {sortedServices.map((service) => (
-                        <Card key={service.id} className="cursor-pointer hover:shadow-lg hover:border-blue-400 transition-all duration-200 border-2" onClick={() => handleServiceSelect(service)}>
-                          <CardHeader>
-                            <CardTitle className="text-lg">{service.name}</CardTitle>
-                            {service.description && <CardDescription>{service.description}</CardDescription>}
-                          </CardHeader>
-                          <CardContent>
-                            <div className="space-y-2 text-sm">
-                              <p className="flex items-center gap-2 text-gray-600">
-                                <Clock className="w-4 h-4 text-blue-600" />
-                                {service.durationMinutes} minuti
-                              </p>
-                              {service.onRequest ? (
-                                <div className="space-y-1">
-                                  <p className="font-bold text-lg text-orange-600">Su Richiesta</p>
-                                  <p className="text-xs text-gray-500">Prezzo indicativo: €{service.price.toFixed(2)}</p>
-                                </div>
-                              ) : (
-                                <p className="font-bold text-xl text-blue-600">€{service.price.toFixed(2)}</p>
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
+                      {filteredServices
+                        .sort((a, b) => {
+                          const isPrimaA = a.name.toLowerCase().includes('prima visita ginecologica');
+                          const isPrimaB = b.name.toLowerCase().includes('prima visita ginecologica');
+                          const isSecondaA = a.name.toLowerCase().includes('seconda visita ginecologica');
+                          const isSecondaB = b.name.toLowerCase().includes('seconda visita ginecologica');
+
+                          if (isPrimaA) return -1;
+                          if (isPrimaB) return 1;
+                          if (isSecondaA) return -1;
+                          if (isSecondaB) return 1;
+                          return 0;
+                        })
+                        .map((service) => (
+                          <Card key={service.id} className="cursor-pointer hover:shadow-lg hover:border-blue-400 transition-all duration-200 border-2" onClick={() => handleServiceSelect(service)}>
+                            <CardHeader>
+                              <div className="flex items-start justify-between gap-2">
+                                <CardTitle className="text-lg">{service.name}</CardTitle>
+                                {service.category && (
+                                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full whitespace-nowrap">
+                                    {service.category}
+                                  </span>
+                                )}
+                              </div>
+                              {service.description && <CardDescription>{service.description}</CardDescription>}
+                            </CardHeader>
+                            <CardContent>
+                              <div className="space-y-2 text-sm">
+                                <p className="flex items-center gap-2 text-gray-600">
+                                  <Clock className="w-4 h-4 text-blue-600" />
+                                  {service.durationMinutes} minuti
+                                </p>
+                                {service.onRequest ? (
+                                  <div className="space-y-1">
+                                    <p className="font-bold text-lg text-orange-600">Su Richiesta</p>
+                                    <p className="text-xs text-gray-500">Prezzo indicativo: €{service.price.toFixed(2)}</p>
+                                  </div>
+                                ) : (
+                                  <p className="font-bold text-xl text-blue-600">€{service.price.toFixed(2)}</p>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
                     </div>
-                  </TabsContent>
-                );
-              })}
+                  ) : (
+                    <div className="text-center py-12">
+                      <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                      <p className="text-lg font-medium text-gray-600 mb-2">Nessuna prestazione trovata</p>
+                      <p className="text-sm text-gray-500">Prova a modificare i termini di ricerca</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                // Normal category view when not searching
+                Object.entries(groupedServices).map(([category, servicesInCategory]) => {
+                  // Ordina i servizi: Prima visita ginecologica, poi Seconda visita ginecologica, poi gli altri
+                  const sortedServices = [...servicesInCategory].sort((a, b) => {
+                    const isPrimaA = a.name.toLowerCase().includes('prima visita ginecologica');
+                    const isPrimaB = b.name.toLowerCase().includes('prima visita ginecologica');
+                    const isSecondaA = a.name.toLowerCase().includes('seconda visita ginecologica');
+                    const isSecondaB = b.name.toLowerCase().includes('seconda visita ginecologica');
+
+                    if (isPrimaA) return -1;
+                    if (isPrimaB) return 1;
+                    if (isSecondaA) return -1;
+                    if (isSecondaB) return 1;
+                    return 0;
+                  });
+
+                  return (
+                    <TabsContent key={category} value={category} className="mt-0">
+                      <div className="mb-4 text-center">
+                        <h3 className="text-lg font-semibold text-gray-800">{category}</h3>
+                        <p className="text-sm text-gray-500 mt-1">{servicesInCategory.length} {servicesInCategory.length === 1 ? 'servizio disponibile' : 'servizi disponibili'}</p>
+                      </div>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        {sortedServices.map((service) => (
+                          <Card key={service.id} className="cursor-pointer hover:shadow-lg hover:border-blue-400 transition-all duration-200 border-2" onClick={() => handleServiceSelect(service)}>
+                            <CardHeader>
+                              <CardTitle className="text-lg">{service.name}</CardTitle>
+                              {service.description && <CardDescription>{service.description}</CardDescription>}
+                            </CardHeader>
+                            <CardContent>
+                              <div className="space-y-2 text-sm">
+                                <p className="flex items-center gap-2 text-gray-600">
+                                  <Clock className="w-4 h-4 text-blue-600" />
+                                  {service.durationMinutes} minuti
+                                </p>
+                                {service.onRequest ? (
+                                  <div className="space-y-1">
+                                    <p className="font-bold text-lg text-orange-600">Su Richiesta</p>
+                                    <p className="text-xs text-gray-500">Prezzo indicativo: €{service.price.toFixed(2)}</p>
+                                  </div>
+                                ) : (
+                                  <p className="font-bold text-xl text-blue-600">€{service.price.toFixed(2)}</p>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </TabsContent>
+                  );
+                })
+              )}
             </Tabs>
           </div>
         )}
